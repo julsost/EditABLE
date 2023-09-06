@@ -4,6 +4,7 @@ from datetime import date
 from datetime import datetime
 from utils import get_guides
 from shiny import App, render, ui, reactive
+from shiny.types import ImgData
 
 import numpy as np
 
@@ -22,11 +23,14 @@ def ui_card(title, *args):
 
 app_ui = ui.page_fluid(
     {"id": "main-content"},
-    ui.panel_title('editABLE'),
+    #ui.panel_title('editABLE'),
+    ui.output_image("display_logo", inline=True),
     ui.br(),
     ui.help_text(
-        '''Welcome to editABLE! This Shiny app was built primarily to find CRISPR base editing guides, 
-         but can also do a first pass analysis to find prime editing guides.'''),
+        '''Welcome to editABLE! We have designed this tool to help to design determine the type of gene editing 
+           most appropriate for a single gene edit. The app is designed to determine eligibility for base editing 
+           and base editing guide RNAs. Under conditions where base editing is not currently possible, we provide 
+           a first pass analysis for reagents needed for prime editing.'''),
     ui.br(),
     ui.br(),
     ui_card(
@@ -60,7 +64,8 @@ app_ui = ui.page_fluid(
             displaying either the guides that editABLE has found for each of your desired edits or a suggestion to 
             use an alternative CRISPR technology if base or prime editing guides can't be found. Lastly, you can 
             download a CSV of the guides found by editABLE by clicking on the "Download Results as CSV File" 
-            button. Note that if you uploaded a large CSV file with many edits, you may have to wait awhile.'''
+            button. Base editing reagents will be suggested first due to their higher reported editing efficiency. 
+            If a base editing guide cannot be found, we will then provide suggested prime editing reagents if possible.'''
         )
     ),
     ui_card(
@@ -73,7 +78,7 @@ app_ui = ui.page_fluid(
         ui.br(),
         ui.help_text(
             '''For single nucleotide variant (SNV) edits, the input sequences are the most straightforward. You can 
-            input the reference and edited sequences in without modification. For example, this would be a valid set of inputs:'''
+            input the reference and edited sequences without modification. For example, this would be a valid set of inputs:'''
         ),
         ui.br(),
         ui.br(),
@@ -144,9 +149,12 @@ app_ui = ui.page_fluid(
         ui.br(),
         ui.br(),
         ui.help_text(
-            '''Lastly, we require at least 25 base pairs of sequence to the left and right of your desired edit. 
-            So in each of the examples above, there must be 25 or more base pairs to the right and left 
-            of the red highlighted regions.'''
+            '''Lastly, we require at least 25 base pairs of sequence to the left and right of your desired ''',
+            ui.tags.b("edit", style="color: red"),
+            '''. So in each of the examples above, there must be 25 or more base pairs to the right and left 
+            of the ''',
+            ui.tags.b("red", style="color: red"),
+            ''' highlighted regions.'''
         )
     ),
     ui_card(
@@ -329,5 +337,15 @@ def server(input, output, session):
             )
         else:
             return ui.div(ui.tags.b(message, style="color: red;"))
+
+    
+    @output
+    @render.image
+    def display_logo():
+        from pathlib import Path
+
+        dir = Path(__file__).resolve().parent
+        img: ImgData = {"src": str(dir / "EditABLE-logos_transparent.png"), "width": "300px"}
+        return img
 
 app = App(app_ui, server)
