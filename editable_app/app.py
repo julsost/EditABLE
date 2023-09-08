@@ -1,8 +1,9 @@
 import asyncio
 import pandas as pd
+import re
 from datetime import date
 from datetime import datetime
-from utils import get_guides
+from utils import get_guides, reverse_complement
 from shiny import App, render, ui, reactive
 from shiny.types import ImgData
 
@@ -183,6 +184,10 @@ app_ui = ui.page_fluid(
         ui.tags.a('PrimeDesign portal', {'href' : 'https://primedesign.pinellolab.partners.org/', 'target' : '_blank'}),
         ''' (https://primedesign.pinellolab.partners.org/) to design your Prime Editing guides.'''
     ),
+    ui.br(),
+    ui.br(),
+    ui.br(),
+    ui.br(),
 )
 
 def check_ref_edited_pair(ref_sequence, edited_sequence):
@@ -326,15 +331,102 @@ def server(input, output, session):
                 to_display_guides_df = pd.concat(dfs_to_merge_display)
                 to_display_guides_df = to_display_guides_df.drop(columns=['Original Sequence', 'Edited Sequence'])
                 guides_df = pd.concat(dfs_to_merge_download)
+                return ui.TagList(
+                    ui.output_data_frame("render_results"),
+                    ui.br(),
+                    ui.br(),
+                    ui.download_button("download_results", "Download Results as CSV File")
+                )
             elif ref_sequence_input and edited_sequence_input and not file_infos:
                 to_display_guides_df, guides_df = get_guides(ref_sequence_input.strip(), edited_sequence_input.strip())
+                #guides_df, to_display_guides_df = get_guides(ref_sequence_input.strip(), edited_sequence_input.strip())
                 to_display_guides_df = to_display_guides_df.drop(columns=['Original Sequence', 'Edited Sequence'])
-            return ui.TagList(
-                ui.output_data_frame("render_results"),
-                ui.br(),
-                ui.br(),
-                ui.download_button("download_results", "Download Results as CSV File")
-            )
+
+                substitution_position = None
+                for i in range(len(ref_sequence_input)):
+                    ref_base = ref_sequence_input[i]
+                    edited_base = edited_sequence_input[i]
+                    if ref_base != edited_base:
+                        substitution_position = i
+                        break
+                
+                list_of_guides_to_display = list()
+                for index, row in guides_df.iterrows():
+                    if row['Editing Technology'] == 'Base Editing':
+                        guide = row["Base Editing Guide"]
+                        orientation = row["Base Editing Guide Orientation"]
+                        if orientation == 'reverse':
+                            guide = reverse_complement(guide)
+                            
+                        all_guide_occurance_starts = [m.start() for m in re.finditer(guide, edited_sequence_input)]
+                        true_starting_positions = list()
+                        for start in all_guide_occurance_starts:
+                            end = start + len(guide) - 1
+                            if substitution_position >= start and substitution_position <= end:
+                                true_starting_positions.append(start)
+                        assert len(true_starting_positions) == 1, "Error! Guide cannot be aligned properly to input edited sequence"
+                        guide_start = true_starting_positions[0]
+
+                        list_of_guides_to_display.append(ui.help_text(f"Guide {index + 1}"))
+                        list_of_guides_to_display.append(ui.br())
+                        if orientation == 'reverse':
+                            list_of_guides_to_display.append(
+                                ui.help_text(
+                                    ui.tags.b(edited_sequence_input[:guide_start], style="font-family: Courier,courier"), 
+                                    ui.tags.b(edited_sequence_input[guide_start:guide_start + 3], style="color: blue; font-family: Courier,courier"), 
+                                    ui.tags.b(edited_sequence_input[guide_start + 3:substitution_position], style="color: green; font-family: Courier,courier"), 
+                                    ui.tags.b(edited_sequence_input[substitution_position:substitution_position + 1], style="color: red; font-family: Courier,courier"), 
+                                    ui.tags.b(edited_sequence_input[substitution_position + 1:len(guide) + guide_start], style="color: green; font-family: Courier,courier"), 
+                                    ui.tags.b(edited_sequence_input[guide_start + len(guide):], style="font-family: Courier,courier"), 
+                                )
+                            )
+                        else:
+                            list_of_guides_to_display.append(
+                                ui.help_text(
+                                    ui.tags.b(edited_sequence_input[:guide_start], style="font-family: Courier,courier"), 
+                                    ui.tags.b(edited_sequence_input[guide_start:substitution_position], style="color: green; font-family: Courier,courier"), 
+                                    ui.tags.b(edited_sequence_input[substitution_position:substitution_position + 1], style="color: red; font-family: Courier,courier"), 
+                                    ui.tags.b(edited_sequence_input[substitution_position + 1:len(guide) + guide_start - 3], style="color: green; font-family: Courier,courier"), 
+                                    ui.tags.b(edited_sequence_input[len(guide) + guide_start - 3:len(guide) + guide_start], style="color: blue; font-family: Courier,courier"), 
+                                    ui.tags.b(edited_sequence_input[guide_start + len(guide):], style="font-family: Courier,courier"), 
+                                )
+                            )
+                        if index != guides_df.shape[0] - 1:
+                            list_of_guides_to_display.append(ui.br())
+                            list_of_guides_to_display.append(ui.br())
+                
+                
+                if len(list_of_guides_to_display) != 0:
+                    return ui.TagList(
+                        ui.output_data_frame("render_results"),
+                        ui.br(),
+                        ui.br(),
+                        ui_card(
+                            "Visualization of Base Editing Guides",
+                            ui.help_text(
+                                "For each base editing guide, the edited sequence you input will be displayed with the guide sequence highlighted. ",
+                                ui.tags.b("Red", style="color: red"),
+                                " characters represent your edited base, ", 
+                                ui.tags.b("blue", style="color: blue"),
+                                " characters represent the PAM nucleotides, and ",
+                                ui.tags.b("green", style="color: green"),
+                                " characters represent other nucleotides in the guide. Grey characters represent nucleotides not spanned by the guide."
+                            ),
+                            ui.br(),
+                            ui.br(),
+                            *list_of_guides_to_display
+                        ),
+                        ui.br(),
+                        ui.br(),
+                        ui.download_button("download_results", "Download Results as CSV File")
+                    )
+                else:
+                    return ui.TagList(
+                        ui.output_data_frame("render_results"),
+                        ui.br(),
+                        ui.br(),
+                        ui.download_button("download_results", "Download Results as CSV File")
+                    )
         else:
             return ui.div(ui.tags.b(message, style="color: red;"))
 
