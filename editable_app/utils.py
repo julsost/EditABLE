@@ -79,19 +79,19 @@ def find_trans_guide_rnas(direction, mutant_seq, genomic_location):
 # Adds the base editable guide RNAs to the data table for export
 def get_guide_RNAs(mutant_seq, edit_type, genomic_location):
     if edit_type == "A>G":
-        return find_BE_guide_rnas("forward", mutant_seq, genomic_location)
+        return find_BE_guide_rnas("forward", mutant_seq, genomic_location), "forward"
     elif edit_type == "T>C":
-        return find_BE_guide_rnas("reverse", mutant_seq, genomic_location)
+        return find_BE_guide_rnas("reverse", mutant_seq, genomic_location), "reverse"
     elif edit_type == "G>A":
-        return find_BE_guide_rnas("forward", mutant_seq, genomic_location)
+        return find_BE_guide_rnas("forward", mutant_seq, genomic_location), "forward"
     elif edit_type == "C>T":
-        return find_BE_guide_rnas("reverse", mutant_seq, genomic_location)
+        return find_BE_guide_rnas("reverse", mutant_seq, genomic_location), "reverse"
     elif edit_type == "G>C":
-        return find_trans_guide_rnas("forward", mutant_seq, genomic_location)
+        return find_trans_guide_rnas("forward", mutant_seq, genomic_location), "forward"
     elif edit_type == "C>G":
-        return find_trans_guide_rnas("reverse", mutant_seq, genomic_location)
+        return find_trans_guide_rnas("reverse", mutant_seq, genomic_location), "reverse"
     else:
-        return "NOT BASE EDITABLE"
+        return "NOT BASE EDITABLE", None
 
 
 def get_guides(ref_sequence_original, edited_sequence_original):
@@ -109,7 +109,7 @@ def get_guides(ref_sequence_original, edited_sequence_original):
                     substitution_position = i
                     break
             edit = f"{ref_sequence[substitution_position]}>{edited_sequence[substitution_position]}"
-            guide_rnas = get_guide_RNAs(edited_sequence, edit, substitution_position)
+            guide_rnas, orientation = get_guide_RNAs(edited_sequence, edit, substitution_position)
             if guide_rnas == "NOT BASE EDITABLE" or guide_rnas == "NO PAM":                
                 primedesign_input = str(ref_sequence[:substitution_position] + f"({ref_sequence[substitution_position]}/{edited_sequence[substitution_position]})" + ref_sequence[substitution_position + 1:])
                 primedesign_output = run_primedesign(str(primedesign_input))
@@ -173,6 +173,7 @@ def get_guides(ref_sequence_original, edited_sequence_original):
                     df_dict['Edited Sequence'].append(edited_sequence_original)
                     df_dict['Editing Technology'].append("Base Editing")
                     df_dict['Base Editing Guide'].append(str(gRNA))
+                    df_dict['Base Editing Guide Orientation'].append(orientation)
 
                     df_dict['PrimeDesign pegRNA Annotation'].append(None)
                     df_dict['PrimeDesign pegRNA PBS'].append(None)
@@ -352,18 +353,19 @@ def get_guides(ref_sequence_original, edited_sequence_original):
     
     df_dict_render = collections.defaultdict(list)
     for key in df_dict:
-        for value in df_dict[key]:
-            if key == 'Editing Technology' or key == 'PrimeDesign pegRNA Annotation':
-                df_dict_render[key].append(value)
-            elif value is None:
-                df_dict_render[key].append(None)
-            else:
-                key_len = len(key)
-                #value += len(value) % (key_len * "B"
-                new_value = '\n'.join(value[i:i+key_len] for i in range(0, len(value), key_len))
-                #new_value += (len(value) % key_len) * "*"
-                #new_value += "\n"
-                df_dict_render[key].append(new_value)
+        if key != 'Base Editing Guide Orientation':
+            for value in df_dict[key]:
+                if key == 'Editing Technology' or key == 'PrimeDesign pegRNA Annotation':
+                    df_dict_render[key].append(value)
+                elif value is None:
+                    df_dict_render[key].append(None)
+                else:
+                    key_len = len(key)
+                    #value += len(value) % (key_len * "B"
+                    new_value = '\n'.join(value[i:i+key_len] for i in range(0, len(value), key_len))
+                    #new_value += (len(value) % key_len) * "*"
+                    #new_value += "\n"
+                    df_dict_render[key].append(new_value)
     
     return pd.DataFrame.from_dict(df_dict_render).dropna(how='all', axis=1), pd.DataFrame.from_dict(df_dict).dropna(how='all', axis=1)
     #return pd.DataFrame.from_dict(df_dict).dropna(how='all', axis=1)
