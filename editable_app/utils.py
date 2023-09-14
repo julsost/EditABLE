@@ -351,12 +351,7 @@ def get_guides(ref_sequence_original, edited_sequence_original):
                 elif value is None:
                     df_dict_render[key].append(None)
                 else:
-                    key_len = len(key)
-                    #value += len(value) % (key_len * "B"
-                    new_value = '\n'.join(value[i:i+key_len] for i in range(0, len(value), key_len))
-                    #new_value += (len(value) % key_len) * "*"
-                    #new_value += "\n"
-                    df_dict_render[key].append(new_value)
+                    df_dict_render[key].append(value)
     
     return pd.DataFrame.from_dict(df_dict_render).dropna(how='all', axis=1), pd.DataFrame.from_dict(df_dict).dropna(how='all', axis=1)
     #return pd.DataFrame.from_dict(df_dict).dropna(how='all', axis=1)
