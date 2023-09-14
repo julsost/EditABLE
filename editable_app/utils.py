@@ -7,13 +7,13 @@ from math import log
 
 bases = {"A", "C", "G", "T"}
 
-PAMs = re.compile("[A|T|G|C]G")
-reverse_PAMs = re.compile("C[A|T|G|C]")
 edit_start = 4
 edit_end = 8
 gRNA_size = 20
-pam_length = 2
+pam_length = None
 
+PAMs = None
+reverse_PAMs = None
 
 # Helper function to find guide RNAs for ABE and CBE editable mutations on forward/reverse strands
 def find_BE_guide_rnas(direction, seq, genomic_location):
@@ -85,7 +85,27 @@ def get_guide_RNAs(mutant_seq, edit_type, genomic_location):
         return "NOT BASE EDITABLE", None
 
 
-def get_guides(ref_sequence_original, edited_sequence_original):
+def get_guides(ref_sequence_original, edited_sequence_original, PAM):
+    global PAMs, reverse_PAMs, pam_length
+    pam_length = len(PAM)
+    if PAM == 'NGN':
+        PAMs = re.compile("[A|T|G|C]G[A|T|G|C]")
+        reverse_PAMs = re.compile("[A|T|G|C]C[A|T|G|C]")
+    elif PAM == 'NGG':
+        PAMs = re.compile("[A|T|G|C]GG")
+        reverse_PAMs = re.compile("CC[A|T|G|C]")
+    elif PAM == 'NGA':
+        PAMs = re.compile("[A|T|G|C]GA")
+        reverse_PAMs = re.compile("TC[A|T|G|C]")
+    elif PAM == 'NNGRRT':
+        PAMs = re.compile("[A|T|G|C][A|T|G|C]G[A|G][A|G]T")
+        reverse_PAMs = re.compile("A[T|C][T|C]C[A|T|G|C][A|T|G|C]")
+    elif PAM == 'NNNRRT':
+        PAMs = re.compile("[A|T|G|C][A|T|G|C][A|T|G|C][A|G][A|G]T")
+        reverse_PAMs = re.compile("A[T|C][T|C][A|T|G|C][A|T|G|C][A|T|G|C]")
+    else:
+        assert False, "Invalid PAM sequence"
+        
     ref_sequence = MutableSeq(ref_sequence_original)
     edited_sequence = MutableSeq(edited_sequence_original)
 
