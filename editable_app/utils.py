@@ -422,6 +422,42 @@ def reverse_complement(sequence):
             new_sequence += '('
     return(new_sequence[::-1])
 
+def almost_reverse_complement(sequence):
+    sequence = sequence
+    new_sequence = ''
+    for base in sequence:
+        if base == 'A':
+            new_sequence += 'T'
+        elif base == 'T':
+            new_sequence += 'A'
+        elif base == 'C':
+            new_sequence += 'G'
+        elif base == 'G':
+            new_sequence += 'C'
+        elif base == 'a':
+            new_sequence += 't'
+        elif base == 't':
+            new_sequence += 'a'
+        elif base == 'c':
+            new_sequence += 'g'
+        elif base == 'g':
+            new_sequence += 'c'
+        elif base == '[':
+            new_sequence += ']'
+        elif base == ']':
+            new_sequence += '['
+        elif base == '+':
+            new_sequence += '+'
+        elif base == '-':
+            new_sequence += '-'
+        elif base == '/':
+            new_sequence += '/'
+        elif base == '(':
+            new_sequence += ')'
+        elif base == ')':
+            new_sequence += '('
+    return new_sequence
+
 # Extract reference and edited sequence information
 def process_sequence(input_sequence):
 
