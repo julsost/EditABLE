@@ -8,10 +8,9 @@ from math import log
 bases = {"A", "C", "G", "T"}
 
 edit_start = 4
-edit_end = 8
+edit_end = 9
 gRNA_size = 20
 pam_length = None
-
 PAMs = None
 reverse_PAMs = None
 

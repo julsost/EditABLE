@@ -180,7 +180,7 @@ app_ui = ui.page_fluid(
         ui.input_text_area("ref_sequence_input", "Reference Sequence", placeholder="Enter sequence", height="50%", width="100%"),
         ui.input_text_area("edited_sequence_input", "Edited Sequence", placeholder="Enter sequence", height="50%", width="100%"),
         ui.input_file("file1", "Choose a CSV File of Sequences to Upload (note that clicking the button will cause the screen to scroll up to the top which is annoying and we are trying to fix that):", accept='.csv', multiple=False, width="100%"),
-        ui.input_select("pam_type", "Select Desired Base Editing PAM", {"NGN": "NGN", "NGG": "NGG", "NGA" : "NGA", "NNGRRT" : "NNNRRT"}),
+        ui.input_select("pam_type", "Select Desired Base Editing PAM", {"NGN": "NGN (Recommended)", "NGG": "NGG (Most Efficient)", "NGA" : "NGA", "NNGRRT" : "NNGRRT (SaCas9-KKH)", "NNNRRT" : "NNNRRT"}),
         ui.input_action_button("get_guides", "Find Guides", class_="btn-success"),
     ),
     ui_card(
@@ -192,6 +192,14 @@ app_ui = ui.page_fluid(
         ui.br(),
         ui.output_ui("run")
     ),
+    ui.br(),
+    ui.help_text(
+        '''For base editing, EditABLE finds guide RNAs where the editable base is in positions 4-9 starting from the 5' 
+           end of the guide RNA. Note that guide RNAs with base edits outside of this editing range may still work but 
+           tend to be significantly less efficient.'''
+    ),
+    ui.br(),
+    ui.br(),
     ui.help_text(
         '''Note that we use PrimeDesign (Hsu, J.Y., Grünewald, J., Szalay, R. et al. 
         PrimeDesign software for rapid and simplified design of prime editing guide RNAs. 
@@ -448,13 +456,13 @@ def server(input, output, session):
                         ui_card(
                             "Visualization of Base Editing Guides",
                             ui.help_text(
-                                "For each base editing guide, the your input will be displayed with the guide sequence highlighted on the appropriate strand. NOTE: only 25 bp of sequence upstream and downstream of the desired edit is shown.",
-                                ui.tags.b("Red", style="color: red"),
+                                "For each base editing guide, the your input will be displayed with the guide sequence highlighted on the appropriate strand.",
+                                ui.tags.b(" Red", style="color: red"),
                                 " characters represent your edited base, ", 
                                 ui.tags.b("blue", style="color: blue"),
                                 " characters represent the PAM nucleotides, and ",
                                 ui.tags.b("green", style="color: green"),
-                                " characters represent other nucleotides in the guide. Grey characters represent nucleotides not spanned by the guide."
+                                " characters represent other nucleotides in the guide. Grey characters represent nucleotides not spanned by the guide. NOTE: only 25 bp of sequence upstream and downstream of the desired edit is shown."
                             ),
                             ui.br(),
                             ui.br(),
