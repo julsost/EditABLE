@@ -162,6 +162,11 @@ app_ui = ui.page_fluid(
         ui.br(),
         ui.br(),
         ui.help_text(
+            '''Then, use the "Select Desired Base Editing PAM" dropdown to select the base editing PAM that is desired.'''
+        ),
+        ui.br(),
+        ui.br(),
+        ui.help_text(
             '''Lastly, we require at least 25 base pairs of sequence to the left and right of your desired ''',
             ui.tags.b("edit", style="color: red"),
             '''. So in each of the examples above, there must be 25 or more base pairs to the right and left 
@@ -175,6 +180,7 @@ app_ui = ui.page_fluid(
         ui.input_text_area("ref_sequence_input", "Reference Sequence", placeholder="Enter sequence", height="50%", width="100%"),
         ui.input_text_area("edited_sequence_input", "Edited Sequence", placeholder="Enter sequence", height="50%", width="100%"),
         ui.input_file("file1", "Choose a CSV File of Sequences to Upload (note that clicking the button will cause the screen to scroll up to the top which is annoying and we are trying to fix that):", accept='.csv', multiple=False, width="100%"),
+        ui.input_select("pam_type", "Select Desired Base Editing PAM", {"NGN": "NGN", "NGG": "NGG", "NGA" : "NGA", "NNGRRT" : "NNNRRT"}),
         ui.input_action_button("get_guides", "Find Guides", class_="btn-success"),
     ),
     ui_card(
@@ -317,6 +323,8 @@ def server(input, output, session):
 
         valid_inputs, message = input_check(ref_sequence_input, edited_sequence_input, file_infos)
 
+        PAM = input.pam_type()
+        
         if valid_inputs:
             if file_infos and not (ref_sequence_input or edited_sequence_input):
                 uploaded_file = file_infos[0]
@@ -331,8 +339,7 @@ def server(input, output, session):
                         p.set(counter, message="Finding guides")
                         ref_sequence_input = "".join(row['Reference Sequence'].split()).upper()
                         edited_sequence_input = "".join(row['Edited Sequence'].split()).upper()
-                        guides_df = get_guides(ref_sequence_input, edited_sequence_input)
-                        to_display_guides_df, guides_df = get_guides(ref_sequence_input, edited_sequence_input)
+                        to_display_guides_df, guides_df = get_guides(ref_sequence_input, edited_sequence_input, PAM)
                         index_column = [str(counter)] * to_display_guides_df.shape[0]
                         to_display_guides_df.insert(loc=0, column='Input CSV Row Number', value=index_column)
                         dfs_to_merge_download.append(guides_df)
@@ -351,7 +358,7 @@ def server(input, output, session):
             elif ref_sequence_input and edited_sequence_input and not file_infos:
                 ref_sequence_input = "".join(ref_sequence_input.split()).upper()
                 edited_sequence_input = "".join(edited_sequence_input.split()).upper()
-                to_display_guides_df, guides_df = get_guides(ref_sequence_input, edited_sequence_input)
+                to_display_guides_df, guides_df = get_guides(ref_sequence_input, edited_sequence_input, PAM)
                 to_display_guides_df = to_display_guides_df.drop(columns=['Original Sequence', 'Edited Sequence'])
                 to_display_guides_df.insert(loc=0, column='Guide', value=[f"Guide {i + 1}" for i in range(to_display_guides_df.shape[0])])
                 
@@ -401,8 +408,8 @@ def server(input, output, session):
                             list_of_guides_to_display.append(ui.br()),
                             list_of_guides_to_display.append(
                                 ui.help_text(
-                                    ui.tags.b("Reverse Strand: 3'-" + ref_sequence_almost_rc[:guide_start - 2], style="font-family: Courier,courier"), 
-                                    ui.tags.b(ref_sequence_almost_rc[guide_start - 2:guide_start], style="color: blue; font-family: Courier,courier"), 
+                                    ui.tags.b("Reverse Strand: 3'-" + ref_sequence_almost_rc[:guide_start - len(PAM)], style="font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_almost_rc[guide_start - len(PAM):guide_start], style="color: blue; font-family: Courier,courier"), 
                                     ui.tags.b(ref_sequence_almost_rc[guide_start:substitution_position], style="color: green; font-family: Courier,courier"), 
                                     ui.tags.b(ref_sequence_almost_rc[substitution_position:substitution_position + 1], style="color: red; font-family: Courier,courier"), 
                                     ui.tags.b(ref_sequence_almost_rc[substitution_position + 1:len(guide) + guide_start], style="color: green; font-family: Courier,courier"), 
@@ -416,8 +423,8 @@ def server(input, output, session):
                                     ui.tags.b(ref_sequence_input[guide_start:substitution_position], style="color: green; font-family: Courier,courier"), 
                                     ui.tags.b(ref_sequence_input[substitution_position:substitution_position + 1], style="color: red; font-family: Courier,courier"), 
                                     ui.tags.b(ref_sequence_input[substitution_position + 1:len(guide) + guide_start], style="color: green; font-family: Courier,courier"), 
-                                    ui.tags.b(ref_sequence_input[len(guide) + guide_start:len(guide) + guide_start + 2], style="color: blue; font-family: Courier,courier"), 
-                                    ui.tags.b(ref_sequence_input[guide_start + len(guide) + 2:] + "-3'", style="font-family: Courier,courier"),
+                                    ui.tags.b(ref_sequence_input[len(guide) + guide_start:len(guide) + guide_start + len(PAM)], style="color: blue; font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_input[guide_start + len(guide) + len(PAM):] + "-3'", style="font-family: Courier,courier"),
                                 )
                             )
                             list_of_guides_to_display.append(ui.br()),
