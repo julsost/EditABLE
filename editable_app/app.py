@@ -392,7 +392,7 @@ def server(input, output, session):
                                 )
                             )
                             list_of_guides_to_display.append(ui.br())
-                            list_of_guides_to_display.append()
+                            #list_of_guides_to_display.append()
                         else:
                             list_of_guides_to_display.append(
                                 ui.help_text(
