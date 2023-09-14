@@ -383,23 +383,25 @@ def server(input, output, session):
                         if orientation == 'reverse':
                             list_of_guides_to_display.append(
                                 ui.help_text(
-                                    ui.tags.b(edited_sequence_input[:guide_start], style="font-family: Courier,courier"), 
-                                    ui.tags.b(edited_sequence_input[guide_start:guide_start + 3], style="color: blue; font-family: Courier,courier"), 
-                                    ui.tags.b(edited_sequence_input[guide_start + 3:substitution_position], style="color: green; font-family: Courier,courier"), 
-                                    ui.tags.b(edited_sequence_input[substitution_position:substitution_position + 1], style="color: red; font-family: Courier,courier"), 
-                                    ui.tags.b(edited_sequence_input[substitution_position + 1:len(guide) + guide_start], style="color: green; font-family: Courier,courier"), 
-                                    ui.tags.b(edited_sequence_input[guide_start + len(guide):], style="font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_input[:guide_start], style="font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_input[guide_start:guide_start + 3], style="color: blue; font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_input[guide_start + 3:substitution_position], style="color: green; font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_input[substitution_position:substitution_position + 1], style="color: red; font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_input[substitution_position + 1:len(guide) + guide_start], style="color: green; font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_input[guide_start + len(guide):], style="font-family: Courier,courier"), 
                                 )
                             )
+                            list_of_guides_to_display.append(ui.br())
+                            list_of_guides_to_display.append()
                         else:
                             list_of_guides_to_display.append(
                                 ui.help_text(
-                                    ui.tags.b(edited_sequence_input[:guide_start], style="font-family: Courier,courier"), 
-                                    ui.tags.b(edited_sequence_input[guide_start:substitution_position], style="color: green; font-family: Courier,courier"), 
-                                    ui.tags.b(edited_sequence_input[substitution_position:substitution_position + 1], style="color: red; font-family: Courier,courier"), 
-                                    ui.tags.b(edited_sequence_input[substitution_position + 1:len(guide) + guide_start - 3], style="color: green; font-family: Courier,courier"), 
-                                    ui.tags.b(edited_sequence_input[len(guide) + guide_start - 3:len(guide) + guide_start], style="color: blue; font-family: Courier,courier"), 
-                                    ui.tags.b(edited_sequence_input[guide_start + len(guide):], style="font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_input[:guide_start], style="font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_input[guide_start:substitution_position], style="color: green; font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_input[substitution_position:substitution_position + 1], style="color: red; font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_input[substitution_position + 1:len(guide) + guide_start - 3], style="color: green; font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_input[len(guide) + guide_start - 3:len(guide) + guide_start], style="color: blue; font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_input[guide_start + len(guide):], style="font-family: Courier,courier"),
                                 )
                             )
                         if index != guides_df.shape[0] - 1:
