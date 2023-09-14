@@ -172,7 +172,6 @@ app_ui = ui.page_fluid(
         "Input",
         ui.input_text_area("ref_sequence_input", "Reference Sequence", placeholder="Enter sequence", height="50%", width="100%"),
         ui.input_text_area("edited_sequence_input", "Edited Sequence", placeholder="Enter sequence", height="50%", width="100%"),
-        #ui.tags.a(ui.input_file("file1", "Choose a csv file of sequences to upload:", accept='.csv', multiple=False, width="100%"), {"position" : "sticky"}),
         ui.input_file("file1", "Choose a CSV File of Sequences to Upload (note that clicking the button will cause the screen to scroll up to the top which is annoying and we are trying to fix that):", accept='.csv', multiple=False, width="100%"),
         ui.input_action_button("get_guides", "Find Guides", class_="btn-success"),
     ),
@@ -352,7 +351,8 @@ def server(input, output, session):
                 edited_sequence_input = "".join(edited_sequence_input.split()).upper()
                 to_display_guides_df, guides_df = get_guides(ref_sequence_input, edited_sequence_input)
                 to_display_guides_df = to_display_guides_df.drop(columns=['Original Sequence', 'Edited Sequence'])
-
+                to_display_guides_df.insert(loc=0, column='Guide', value=[f"Guide {i + 1}" for i in range(to_display_guides_df.shape[0])])
+                
                 substitution_position = None
                 for i in range(len(ref_sequence_input)):
                     ref_base = ref_sequence_input[i]
@@ -369,7 +369,7 @@ def server(input, output, session):
                         if orientation == 'reverse':
                             guide = reverse_complement(guide)
                             
-                        all_guide_occurance_starts = [m.start() for m in re.finditer(guide, edited_sequence_input)]
+                        all_guide_occurance_starts = [m.start() for m in re.finditer(guide, ref_sequence_input)]
                         true_starting_positions = list()
                         for start in all_guide_occurance_starts:
                             end = start + len(guide) - 1
