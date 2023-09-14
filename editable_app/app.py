@@ -29,9 +29,18 @@ app_ui = ui.page_fluid(
     ui.br(),
     ui.help_text(
         '''Welcome to editABLE! We have designed this tool to help to design determine the type of gene editing 
-           most appropriate for a single gene edit. The app is designed to determine eligibility for base editing 
-           and base editing guide RNAs. Under conditions where base editing is not currently possible, we provide 
-           a first pass analysis for reagents needed for prime editing.'''),
+           most appropriate for a single gene edit. We prioritize finding base editing reagents, as they have higher 
+           reported editing efficiency. Under conditions where base editing is not currently possible, we provide 
+           a first pass analysis for reagents needed for prime editing. Please refer to the following papers for more 
+           information on base and prime editing:'''
+    ),
+    ui.br(),
+    ui.br(),
+    ui.help_text("Adenine base editors (A->G and T->C) ", ui.tags.a('paper', {'href' : 'https://pubmed.ncbi.nlm.nih.gov/29160308/', 'target' : '_blank'})),
+    ui.br(),
+    ui.help_text("Cytosine base editors (C->T and G->A) ", ui.tags.a('paper', {'href' : 'https://pubmed.ncbi.nlm.nih.gov/27096365/', 'target' : '_blank'})),
+    ui.br(),
+    ui.help_text("Prime editing ", ui.tags.a('paper', {'href' : 'https://pubmed.ncbi.nlm.nih.gov/31634902/', 'target' : '_blank'})),
     ui.br(),
     ui.br(),
     ui_card(
@@ -73,7 +82,8 @@ app_ui = ui.page_fluid(
         "Input requirements",
         ui.help_text(
             '''Your reference sequence(s) and the edited sequence(s) must be the same length. Only single edits 
-            (SNV, insertion, deletion) are supported at this time.'''
+            (SNV, insertion, deletion) are supported at this time. Only the following characters are allowed in the input
+            ("A", "C", "G", "T", "a", "c", "g", "t", "-"). All whitespace is allowed but will be removed before running our pipeline.'''
         ),
         ui.br(),
         ui.br(),
@@ -265,15 +275,15 @@ def server(input, output, session):
                 return False, 'Uploaded csv does not have the proper columns. Your csv must have two columns with names "Reference Sequence" and "Edited Sequence"'
             counter = 1
             for index, row in df.iterrows():
-                ref_sequence = row['Reference Sequence'].strip()
-                edited_sequence = row['Edited Sequence'].strip()
+                ref_sequence = "".join(row['Reference Sequence'].split()).upper()
+                edited_sequence = "".join(row['Edited Sequence'].split()).upper()
                 check, message = check_ref_edited_pair(ref_sequence, edited_sequence)
                 if not check:
                     return check, f"Error row {counter}: {message}"
                 counter += 1
             return True, "Input CSV verified. Proceed to get guides."
         elif ref_sequence_input and edited_sequence_input and not file_infos:
-            check, message = check_ref_edited_pair(ref_sequence_input.strip(), edited_sequence_input.strip())
+            check, message = check_ref_edited_pair("".join(ref_sequence_input.split()).upper(), "".join(edited_sequence_input.split()).upper())
             return check, message
         else:
             return False, "Error: Fill in both text input fields or upload a CSV file but do not do both."
@@ -318,8 +328,8 @@ def server(input, output, session):
                     p.set(message="Finding guides", detail="This may take a while...")
                     for index, row in df.iterrows():
                         p.set(counter, message="Finding guides")
-                        ref_sequence_input = row['Reference Sequence'].strip()
-                        edited_sequence_input = row['Edited Sequence'].strip()
+                        ref_sequence_input = "".join(row['Reference Sequence'].split()).upper()
+                        edited_sequence_input = "".join(row['Edited Sequence'].split()).upper()
                         guides_df = get_guides(ref_sequence_input, edited_sequence_input)
                         to_display_guides_df, guides_df = get_guides(ref_sequence_input, edited_sequence_input)
                         index_column = [str(counter)] * to_display_guides_df.shape[0]
@@ -338,8 +348,9 @@ def server(input, output, session):
                     ui.download_button("download_results", "Download Results as CSV File")
                 )
             elif ref_sequence_input and edited_sequence_input and not file_infos:
-                to_display_guides_df, guides_df = get_guides(ref_sequence_input.strip(), edited_sequence_input.strip())
-                #guides_df, to_display_guides_df = get_guides(ref_sequence_input.strip(), edited_sequence_input.strip())
+                ref_sequence_input = "".join(ref_sequence_input.split()).upper()
+                edited_sequence_input = "".join(edited_sequence_input.split()).upper()
+                to_display_guides_df, guides_df = get_guides(ref_sequence_input, edited_sequence_input)
                 to_display_guides_df = to_display_guides_df.drop(columns=['Original Sequence', 'Edited Sequence'])
 
                 substitution_position = None
