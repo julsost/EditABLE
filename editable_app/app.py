@@ -3,7 +3,7 @@ import pandas as pd
 import re
 from datetime import date
 from datetime import datetime
-from utils import get_guides, reverse_complement
+from utils import get_guides, almost_reverse_complement
 from shiny import App, render, ui, reactive
 from shiny.types import ImgData
 
@@ -11,6 +11,7 @@ import numpy as np
 
 bases = {"A", "C", "G", "T"}
 accepted_bases = {"A", "C", "G", "T", "-"}
+
 
 # A card component wrapper.
 def ui_card(title, *args):
@@ -83,7 +84,8 @@ app_ui = ui.page_fluid(
         ui.help_text(
             '''Your reference sequence(s) and the edited sequence(s) must be the same length. Only single edits 
             (SNV, insertion, deletion) are supported at this time. Only the following characters are allowed in the input
-            ("A", "C", "G", "T", "a", "c", "g", "t", "-"). All whitespace is allowed but will be removed before running our pipeline.'''
+            ("A", "C", "G", "T", "a", "c", "g", "t", "-"). All whitespace is allowed but will be removed before running our pipeline.
+            Your sequences need to be from 5' to 3'.'''
         ),
         ui.br(),
         ui.br(),
@@ -366,16 +368,20 @@ def server(input, output, session):
                     if row['Editing Technology'] == 'Base Editing':
                         guide = row["Base Editing Guide"]
                         orientation = row["Base Editing Guide Orientation"]
+                        
+                        ref_sequence_almost_rc = almost_reverse_complement(ref_sequence_input)
                         if orientation == 'reverse':
-                            guide = reverse_complement(guide)
+                            guide = guide[::-1]
+                            all_guide_occurance_starts = [m.start() for m in re.finditer(guide, ref_sequence_almost_rc)]
+                        else:
+                            all_guide_occurance_starts = [m.start() for m in re.finditer(guide, ref_sequence_input)]
                             
-                        all_guide_occurance_starts = [m.start() for m in re.finditer(guide, ref_sequence_input)]
                         true_starting_positions = list()
                         for start in all_guide_occurance_starts:
-                            end = start + len(guide) - 1
+                            end = start + len(guide) - 1                                
                             if substitution_position >= start and substitution_position <= end:
                                 true_starting_positions.append(start)
-                        assert len(true_starting_positions) == 1, "Error! Guide cannot be aligned properly to input edited sequence"
+                        assert len(true_starting_positions) == 1, ("Error! Guide cannot be aligned properly to input reference sequence", guide, ref_sequence_almost_rc, orientation, all_guide_occurance_starts, substitution_position)
                         guide_start = true_starting_positions[0]
 
                         list_of_guides_to_display.append(ui.help_text(f"Guide {index + 1}"))
@@ -383,27 +389,41 @@ def server(input, output, session):
                         if orientation == 'reverse':
                             list_of_guides_to_display.append(
                                 ui.help_text(
-                                    ui.tags.b(ref_sequence_input[:guide_start], style="font-family: Courier,courier"), 
-                                    ui.tags.b(ref_sequence_input[guide_start:guide_start + 3], style="color: blue; font-family: Courier,courier"), 
-                                    ui.tags.b(ref_sequence_input[guide_start + 3:substitution_position], style="color: green; font-family: Courier,courier"), 
-                                    ui.tags.b(ref_sequence_input[substitution_position:substitution_position + 1], style="color: red; font-family: Courier,courier"), 
-                                    ui.tags.b(ref_sequence_input[substitution_position + 1:len(guide) + guide_start], style="color: green; font-family: Courier,courier"), 
-                                    ui.tags.b(ref_sequence_input[guide_start + len(guide):], style="font-family: Courier,courier"), 
+                                    ui.tags.b("Forward Strand: 5'-" + ref_sequence_input[:substitution_position], style="font-family: Courier,courier"),
+                                    ui.tags.b(ref_sequence_input[substitution_position], style="color: red; font-family: Courier,courier"),
+                                    ui.tags.b(ref_sequence_input[substitution_position + 1:] + "-3'", style="font-family: Courier,courier"), 
                                 )
                             )
-                            list_of_guides_to_display.append(ui.br())
-                            #list_of_guides_to_display.append()
+                            list_of_guides_to_display.append(ui.br()),
+                            list_of_guides_to_display.append(
+                                ui.help_text(
+                                    ui.tags.b("Reverse Strand: 3'-" + ref_sequence_almost_rc[:guide_start], style="font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_almost_rc[guide_start:guide_start + 3], style="color: blue; font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_almost_rc[guide_start + 3:substitution_position], style="color: green; font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_almost_rc[substitution_position:substitution_position + 1], style="color: red; font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_almost_rc[substitution_position + 1:len(guide) + guide_start], style="color: green; font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_almost_rc[guide_start + len(guide):] + "-5'", style="font-family: Courier,courier"),
+                                )
+                            )
                         else:
                             list_of_guides_to_display.append(
                                 ui.help_text(
-                                    ui.tags.b(ref_sequence_input[:guide_start], style="font-family: Courier,courier"), 
+                                    ui.tags.b("Forward Strand: 5;-" + ref_sequence_input[:guide_start], style="font-family: Courier,courier"), 
                                     ui.tags.b(ref_sequence_input[guide_start:substitution_position], style="color: green; font-family: Courier,courier"), 
                                     ui.tags.b(ref_sequence_input[substitution_position:substitution_position + 1], style="color: red; font-family: Courier,courier"), 
                                     ui.tags.b(ref_sequence_input[substitution_position + 1:len(guide) + guide_start - 3], style="color: green; font-family: Courier,courier"), 
                                     ui.tags.b(ref_sequence_input[len(guide) + guide_start - 3:len(guide) + guide_start], style="color: blue; font-family: Courier,courier"), 
-                                    ui.tags.b(ref_sequence_input[guide_start + len(guide):], style="font-family: Courier,courier"),
+                                    ui.tags.b(ref_sequence_input[guide_start + len(guide):] + "-3'", style="font-family: Courier,courier"),
                                 )
                             )
+                            list_of_guides_to_display.append(ui.br()),
+                            list_of_guides_to_display.append(
+                                    ui.help_text(
+                                        ui.tags.b("Reverse Strand: 3'-" + ref_sequence_almost_rc[:substitution_position], style="font-family: Courier,courier"),
+                                        ui.tags.b(ref_sequence_almost_rc[substitution_position], style="color: red; font-family: Courier,courier"),
+                                        ui.tags.b(ref_sequence_almost_rc[substitution_position + 1:] + "-5'", style="font-family: Courier,courier"),
+                                    )
+                                ),
                         if index != guides_df.shape[0] - 1:
                             list_of_guides_to_display.append(ui.br())
                             list_of_guides_to_display.append(ui.br())
@@ -417,7 +437,7 @@ def server(input, output, session):
                         ui_card(
                             "Visualization of Base Editing Guides",
                             ui.help_text(
-                                "For each base editing guide, the edited sequence you input will be displayed with the guide sequence highlighted. ",
+                                "For each base editing guide, the your input will be displayed with the guide sequence highlighted on the appropriate strand. ",
                                 ui.tags.b("Red", style="color: red"),
                                 " characters represent your edited base, ", 
                                 ui.tags.b("blue", style="color: blue"),
