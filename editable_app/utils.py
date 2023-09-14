@@ -15,40 +15,31 @@ gRNA_size = 20
 pam_length = 2
 
 
-# Random affine gap penalty scoring function
-def gap_function(x, y):  # x is gap position in seq, y is gap length
-    if y == 0:  # No gap
-        return 0
-    elif y == 1:  # Gap open penalty
-        return -2
-    return - (2 + y / 4.0 + log(y) / 2.0)
-
-
 # Helper function to find guide RNAs for ABE and CBE editable mutations on forward/reverse strands
-def find_BE_guide_rnas(direction, mutant_seq, genomic_location):
+def find_BE_guide_rnas(direction, seq, genomic_location):
     if direction == "forward":
         start_pams = genomic_location + (gRNA_size - edit_end) + 1
         end_pams = genomic_location + (gRNA_size - edit_start) + pam_length + 1
-        possible_pams = mutant_seq[start_pams : end_pams]
+        possible_pams = seq[start_pams : end_pams]
         if len(re.findall(PAMs, str(possible_pams))) == 0:
             return "NO PAM"
         else:
             guideRNAs = []
             for match in re.finditer(PAMs, str(possible_pams), overlapped=True):
-                gRNA = mutant_seq[start_pams + match.start() - gRNA_size: start_pams + match.start()]
+                gRNA = seq[start_pams + match.start() - gRNA_size: start_pams + match.start()]
                 guideRNAs.append(str(gRNA))
             return guideRNAs
 
     elif direction == "reverse":
         start_pams = genomic_location - gRNA_size + edit_start - pam_length
         end_pams = genomic_location - gRNA_size + edit_end
-        possible_pams = mutant_seq[start_pams : end_pams]
+        possible_pams = seq[start_pams : end_pams]
         if len(re.findall(reverse_PAMs, str(possible_pams))) == 0:
             return "NO PAM"
         else:
             guideRNAs = []
             for match in re.finditer(reverse_PAMs, str(possible_pams), overlapped=True):
-                gRNA = mutant_seq[start_pams + match.start() + pam_length : start_pams + match.start() + pam_length + gRNA_size]
+                gRNA = seq[start_pams + match.start() + pam_length : start_pams + match.start() + pam_length + gRNA_size]
                 gRNA.reverse_complement(inplace=True)
                 guideRNAs.append(str(gRNA))
             return guideRNAs
@@ -57,19 +48,19 @@ def find_BE_guide_rnas(direction, mutant_seq, genomic_location):
 
 
 # Helper function to find guide RNAs for transversion (C>G and G>C) mutations on forward/reverse strands
-def find_trans_guide_rnas(direction, mutant_seq, genomic_location):
+def find_trans_guide_rnas(direction, seq, genomic_location):
     if direction == "forward":
-        pam = mutant_seq[genomic_location + 15 : genomic_location + 15 + pam_length]
+        pam = seq[genomic_location + 15 : genomic_location + 15 + pam_length]
         if len(re.findall(PAMs, str(pam))) == 0:
             return "NO PAM"
         else:
-            return mutant_seq[genomic_location + 15 - gRNA_size : genomic_location + 15]
+            return seq[genomic_location + 15 - gRNA_size : genomic_location + 15]
     elif direction == "reverse":
-        pam = mutant_seq[genomic_location - 15 - 1: genomic_location - 15 - 1 + pam_length]
+        pam = seq[genomic_location - 15 - 1: genomic_location - 15 - 1 + pam_length]
         if len(re.findall(reverse_PAMs, str(pam))) == 0:
             return "NO PAM"
         else:
-            gRNA = mutant_seq[genomic_location - 15 - 1 + pam_length: genomic_location - 15 - 1 + pam_length + gRNA_size]
+            gRNA = seq[genomic_location - 15 - 1 + pam_length: genomic_location - 15 - 1 + pam_length + gRNA_size]
             gRNA.reverse_complement(inplace=True)
             return gRNA
     else:
@@ -109,7 +100,7 @@ def get_guides(ref_sequence_original, edited_sequence_original):
                     substitution_position = i
                     break
             edit = f"{ref_sequence[substitution_position]}>{edited_sequence[substitution_position]}"
-            guide_rnas, orientation = get_guide_RNAs(edited_sequence, edit, substitution_position)
+            guide_rnas, orientation = get_guide_RNAs(ref_sequence, edit, substitution_position)
             if guide_rnas == "NOT BASE EDITABLE" or guide_rnas == "NO PAM":                
                 primedesign_input = str(ref_sequence[:substitution_position] + f"({ref_sequence[substitution_position]}/{edited_sequence[substitution_position]})" + ref_sequence[substitution_position + 1:])
                 primedesign_output = run_primedesign(str(primedesign_input))
