@@ -209,7 +209,7 @@ def check_ref_edited_pair(ref_sequence, edited_sequence):
     if ref_sequence == edited_sequence:
         return False, "The reference sequence and the edited sequence are the same."
     if len(set(ref_sequence) - accepted_bases) != 0 or len(set(edited_sequence) - accepted_bases) != 0:
-        return False, "You may only have the following characters in your sequences {A, C, G, T, -}."
+        return False, "You may only have the following characters in your sequences {A, C, G, T, a, c, g, t, -}."
     if len(set(ref_sequence) - bases) == 0 and len(set(edited_sequence) - bases) == 0:
         substitution_position = None
         for i in range(len(ref_sequence)):
@@ -217,7 +217,7 @@ def check_ref_edited_pair(ref_sequence, edited_sequence):
             edited_base = edited_sequence[i]
             if ref_base != edited_base:
                 if substitution_position is not None:
-                    return False, "The reference sequence and the edited sequence contain more than one SNV. You can only have one SNV edit."
+                    return False, "The reference sequence and the edited sequence contain more than one SNV. EditABLE currently only supports single SNVs, insertions, or deletions."
                 else:
                     substitution_position = i
         if substitution_position < 25:
@@ -237,7 +237,7 @@ def check_ref_edited_pair(ref_sequence, edited_sequence):
                     if start_dash_position is None:
                         start_dash_position = i
                     if current_dash_position is not None and i - current_dash_position != 1:
-                        return False, 'The "-" characters are not contiguous, indicating that there are multiple insertions. You can only have one insertion.'
+                        return False, 'The "-" characters are not contiguous, indicating that there are multiple insertions. EditABLE currently only supports single SNVs, insertions, or deletions.'
                     else:
                         current_dash_position = i
             if start_dash_position < 25:
@@ -252,7 +252,7 @@ def check_ref_edited_pair(ref_sequence, edited_sequence):
                     if start_dash_position is None:
                         start_dash_position = i
                     if current_dash_position is not None and i - current_dash_position != 1:
-                        return False, 'The "-" characters are not contiguous, indicating that there are multiple insertions. You can only have one insertion.'
+                        return False, 'The "-" characters are not contiguous, indicating that there are multiple deletions. EditABLE currently only supports single SNVs, insertions, or deletions.'
                     else:
                         current_dash_position = i
             if start_dash_position < 25:
@@ -362,7 +362,11 @@ def server(input, output, session):
                     if ref_base != edited_base:
                         substitution_position = i
                         break
-                
+
+                if len(ref_sequence_input) > 51:
+                    ref_sequence_input = ref_sequence_input[substitution_position - 25:substitution_position + 25 + 1]
+                    substitution_position = 25
+                    
                 list_of_guides_to_display = list()
                 for index, row in guides_df.iterrows():
                     if row['Editing Technology'] == 'Base Editing':
@@ -397,9 +401,9 @@ def server(input, output, session):
                             list_of_guides_to_display.append(ui.br()),
                             list_of_guides_to_display.append(
                                 ui.help_text(
-                                    ui.tags.b("Reverse Strand: 3'-" + ref_sequence_almost_rc[:guide_start], style="font-family: Courier,courier"), 
-                                    ui.tags.b(ref_sequence_almost_rc[guide_start:guide_start + 3], style="color: blue; font-family: Courier,courier"), 
-                                    ui.tags.b(ref_sequence_almost_rc[guide_start + 3:substitution_position], style="color: green; font-family: Courier,courier"), 
+                                    ui.tags.b("Reverse Strand: 3'-" + ref_sequence_almost_rc[:guide_start - 2], style="font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_almost_rc[guide_start - 2:guide_start], style="color: blue; font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_almost_rc[guide_start:substitution_position], style="color: green; font-family: Courier,courier"), 
                                     ui.tags.b(ref_sequence_almost_rc[substitution_position:substitution_position + 1], style="color: red; font-family: Courier,courier"), 
                                     ui.tags.b(ref_sequence_almost_rc[substitution_position + 1:len(guide) + guide_start], style="color: green; font-family: Courier,courier"), 
                                     ui.tags.b(ref_sequence_almost_rc[guide_start + len(guide):] + "-5'", style="font-family: Courier,courier"),
@@ -411,9 +415,9 @@ def server(input, output, session):
                                     ui.tags.b("Forward Strand: 5;-" + ref_sequence_input[:guide_start], style="font-family: Courier,courier"), 
                                     ui.tags.b(ref_sequence_input[guide_start:substitution_position], style="color: green; font-family: Courier,courier"), 
                                     ui.tags.b(ref_sequence_input[substitution_position:substitution_position + 1], style="color: red; font-family: Courier,courier"), 
-                                    ui.tags.b(ref_sequence_input[substitution_position + 1:len(guide) + guide_start - 3], style="color: green; font-family: Courier,courier"), 
-                                    ui.tags.b(ref_sequence_input[len(guide) + guide_start - 3:len(guide) + guide_start], style="color: blue; font-family: Courier,courier"), 
-                                    ui.tags.b(ref_sequence_input[guide_start + len(guide):] + "-3'", style="font-family: Courier,courier"),
+                                    ui.tags.b(ref_sequence_input[substitution_position + 1:len(guide) + guide_start], style="color: green; font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_input[len(guide) + guide_start:len(guide) + guide_start + 2], style="color: blue; font-family: Courier,courier"), 
+                                    ui.tags.b(ref_sequence_input[guide_start + len(guide) + 2:] + "-3'", style="font-family: Courier,courier"),
                                 )
                             )
                             list_of_guides_to_display.append(ui.br()),
@@ -437,7 +441,7 @@ def server(input, output, session):
                         ui_card(
                             "Visualization of Base Editing Guides",
                             ui.help_text(
-                                "For each base editing guide, the your input will be displayed with the guide sequence highlighted on the appropriate strand. ",
+                                "For each base editing guide, the your input will be displayed with the guide sequence highlighted on the appropriate strand. NOTE: only 25 bp of sequence upstream and downstream of the desired edit is shown.",
                                 ui.tags.b("Red", style="color: red"),
                                 " characters represent your edited base, ", 
                                 ui.tags.b("blue", style="color: blue"),
