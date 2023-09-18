@@ -81,6 +81,11 @@ app_ui = ui.page_fluid(
             download a CSV of the guides found by editABLE by clicking on the "Download Results as CSV File" 
             button. Base editing reagents will be suggested first due to their higher reported editing efficiency. 
             If a base editing guide cannot be found, we will then provide suggested prime editing reagents if possible.'''
+        ),
+        ui.br(),
+        ui.br(),
+        ui.help_text(
+            '''Please contact us if you have any questions/issues!'''
         )
     ),
     ui_card(
@@ -183,7 +188,8 @@ app_ui = ui.page_fluid(
         "Input",
         ui.input_text_area("ref_sequence_input", "Reference Sequence", placeholder="Enter sequence", height="50%", width="100%"),
         ui.input_text_area("edited_sequence_input", "Edited Sequence", placeholder="Enter sequence", height="50%", width="100%"),
-        ui.input_file("file1", "Choose a CSV File of Sequences to Upload (note that clicking the button will cause the screen to scroll up to the top which is annoying and we are trying to fix that):", accept='.csv', multiple=False, width="100%"),
+        ui.output_ui("ui_input_file"),
+        #ui.input_file("file1", "Choose a CSV File of Sequences to Upload (note that clicking the button will cause the screen to scroll up to the top which is annoying and we are trying to fix that):", accept='.csv', multiple=False, width="100%"),
         ui.input_select("pam_type", "Select Desired Base Editing PAM", {"NGN": "NGN (Recommended)", "NGG": "NGG (Most Efficient)", "NGA" : "NGA", "NNGRRT" : "NNGRRT (SaCas9)", "NNNRRT" : "NNNRRT (SaCas9-KKH)"}),
         ui.input_action_button("get_guides", "Find Guides", class_="btn-primary"),
         ui.help_text(" "),
@@ -281,7 +287,7 @@ def check_ref_edited_pair(ref_sequence, edited_sequence):
                 return False, f"There must be at least 25 base pairs of sequence after the desired edit. {len(ref_sequence) - 1 - current_dash_position} base pairs were found after your edit."
     return True, "Inputs verified. Proceed to get guides."
     
-def server(input, output, session):    
+def server(input, output, session):
     def input_check(ref_sequence_input, edited_sequence_input, file_infos):
         if file_infos and not (ref_sequence_input or edited_sequence_input):
             uploaded_fule = file_infos[0]
@@ -314,7 +320,13 @@ def server(input, output, session):
             ui.update_text_area("ref_sequence_input", value = "")
             ui.update_text_area("edited_sequence_input", value = "")
             ui.update_select("pam_type", selected='NGN')
-    
+
+    @output
+    @render.ui
+    def ui_input_file():
+        input.clear()  
+        return ui.input_file(f"file1", "Choose a CSV File of Sequences to Upload (note that clicking the button will cause the screen to scroll up to the top which is annoying and we are trying to fix that):", accept='.csv', multiple=False, width="100%"),
+        
     @output
     @render.ui
     @reactive.event(input.get_guides)
@@ -493,7 +505,6 @@ def server(input, output, session):
         else:
             return ui.div(ui.tags.b(message, style="color: red;"))
 
-    
     @output
     @render.image
     def display_logo():
