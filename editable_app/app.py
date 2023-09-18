@@ -1,4 +1,5 @@
 import asyncio
+import os
 import pandas as pd
 import re
 from datetime import date
@@ -29,19 +30,22 @@ app_ui = ui.page_fluid(
     ui.output_image("display_logo", inline=True),
     ui.br(),
     ui.help_text(
-        '''Welcome to editABLE! We have designed this tool to help to design determine the type of gene editing 
-           most appropriate for a single gene edit. We prioritize finding base editing reagents, as they have higher 
-           reported editing efficiency. Under conditions where base editing is not currently possible, we provide 
-           a first pass analysis for reagents needed for prime editing. Please refer to the following papers for more 
-           information on base and prime editing:'''
+        '''Welcome to editABLE! We have designed this tool to help to determine the type of gene editing most appropriate for a single gene edit. We prioritize finding base 
+        editing reagents, as they have higher reported editing efficiency. Under conditions where base editing is not currently possible, we provide a first pass analysis for 
+        reagents needed for prime editing. Please refer to the following papers for more information on base and prime editing:'''
     ),
     ui.br(),
     ui.br(),
-    ui.help_text("Adenine base editors (A->G and T->C) ", ui.tags.a('paper', {'href' : 'https://pubmed.ncbi.nlm.nih.gov/29160308/', 'target' : '_blank'})),
+    ui.help_text(ui.tags.a('Komor AC, Kim YB, Packer MS, Zuris JA, Liu DR. Programmable editing of a target base in genomic DNA without double-stranded DNA cleavage. Nature. 2016;533(7603):420-424.', {'href' : 'https://pubmed.ncbi.nlm.nih.gov/27096365/', 'target' : '_blank'})),
     ui.br(),
-    ui.help_text("Cytosine base editors (C->T and G->A) ", ui.tags.a('paper', {'href' : 'https://pubmed.ncbi.nlm.nih.gov/27096365/', 'target' : '_blank'})),
     ui.br(),
-    ui.help_text("Prime editing ", ui.tags.a('paper', {'href' : 'https://pubmed.ncbi.nlm.nih.gov/31634902/', 'target' : '_blank'})),
+    ui.help_text(ui.tags.a('Gaudelli NM, Komor AC, Rees HA, et al. Programmable base editing of A•T to G•C in genomic DNA without DNA cleavage. Nature. 2017;551(7681):464-471.', {'href' : 'https://pubmed.ncbi.nlm.nih.gov/29160308/', 'target' : '_blank'})),
+    ui.br(),
+    ui.br(),
+    ui.help_text(ui.tags.a('Anzalone AV, Randolph PB, Davis JR, et al. Search-and-replace genome editing without double-strand breaks or donor DNA. Nature. 2019;576(7785):149-157.', {'href' : 'https://pubmed.ncbi.nlm.nih.gov/31634902/', 'target' : '_blank'})),
+    ui.br(),
+    ui.br(),
+    ui.help_text(ui.tags.a('Doman JL, Pandey S, Neugebauer ME, et al. Phage-assisted evolution and protein engineering yield compact, efficient prime editors. Cell. 2023;186(18):3983-4002.e26.', {'href' : 'https://pubmed.ncbi.nlm.nih.gov/37657419/', 'target' : '_blank'})),
     ui.br(),
     ui.br(),
     ui_card(
@@ -180,8 +184,10 @@ app_ui = ui.page_fluid(
         ui.input_text_area("ref_sequence_input", "Reference Sequence", placeholder="Enter sequence", height="50%", width="100%"),
         ui.input_text_area("edited_sequence_input", "Edited Sequence", placeholder="Enter sequence", height="50%", width="100%"),
         ui.input_file("file1", "Choose a CSV File of Sequences to Upload (note that clicking the button will cause the screen to scroll up to the top which is annoying and we are trying to fix that):", accept='.csv', multiple=False, width="100%"),
-        ui.input_select("pam_type", "Select Desired Base Editing PAM", {"NGN": "NGN (Recommended)", "NGG": "NGG (Most Efficient)", "NGA" : "NGA", "NNGRRT" : "NNGRRT (SaCas9-KKH)", "NNNRRT" : "NNNRRT"}),
-        ui.input_action_button("get_guides", "Find Guides", class_="btn-success"),
+        ui.input_select("pam_type", "Select Desired Base Editing PAM", {"NGN": "NGN (Recommended)", "NGG": "NGG (Most Efficient)", "NGA" : "NGA", "NNGRRT" : "NNGRRT (SaCas9)", "NNNRRT" : "NNNRRT (SaCas9-KKH)"}),
+        ui.input_action_button("get_guides", "Find Guides", class_="btn-primary"),
+        ui.help_text(" "),
+        ui.input_action_button("clear", "Clear Inputs", class_="btn-danger"),
     ),
     ui_card(
         "Results",
@@ -276,8 +282,6 @@ def check_ref_edited_pair(ref_sequence, edited_sequence):
     return True, "Inputs verified. Proceed to get guides."
     
 def server(input, output, session):    
-    MAX_SIZE = 1000
-    
     def input_check(ref_sequence_input, edited_sequence_input, file_infos):
         if file_infos and not (ref_sequence_input or edited_sequence_input):
             uploaded_fule = file_infos[0]
@@ -302,12 +306,19 @@ def server(input, output, session):
             return check, message
         else:
             return False, "Error: Fill in both text input fields or upload a CSV file but do not do both."
+
+    @reactive.Effect()
+    def clear():
+        value = input.clear()    
+        if value > 0:
+            ui.update_text_area("ref_sequence_input", value = "")
+            ui.update_text_area("edited_sequence_input", value = "")
+            ui.update_select("pam_type", selected='NGN')
     
     @output
     @render.ui
     @reactive.event(input.get_guides)
     def run():
-        
         @output
         @render.data_frame
         def render_results():
@@ -328,7 +339,7 @@ def server(input, output, session):
         ref_sequence_input = input.ref_sequence_input()
         edited_sequence_input = input.edited_sequence_input()
         file_infos = input.file1()
-
+        
         valid_inputs, message = input_check(ref_sequence_input, edited_sequence_input, file_infos)
 
         PAM = input.pam_type()
@@ -341,7 +352,7 @@ def server(input, output, session):
                 dfs_to_merge_display = list()
                 counter = 1
                 
-                with ui.Progress(min=1, max=df.shape[0]) as p:
+                with ui.Progress(min=1, max=df.shape[0] + 1) as p:
                     p.set(message="Finding guides", detail="This may take a while...")
                     for index, row in df.iterrows():
                         p.set(counter, message="Finding guides")
