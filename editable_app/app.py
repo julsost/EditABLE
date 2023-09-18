@@ -450,7 +450,7 @@ def server(input, output, session):
                         else:
                             list_of_guides_to_display.append(
                                 ui.help_text(
-                                    ui.tags.b("Forward Strand: 5;-" + ref_sequence_input[:guide_start], style="font-family: Courier,courier"), 
+                                    ui.tags.b("Forward Strand: 5-" + ref_sequence_input[:guide_start], style="font-family: Courier,courier"), 
                                     ui.tags.b(ref_sequence_input[guide_start:substitution_position], style="color: green; font-family: Courier,courier"), 
                                     ui.tags.b(ref_sequence_input[substitution_position:substitution_position + 1], style="color: red; font-family: Courier,courier"), 
                                     ui.tags.b(ref_sequence_input[substitution_position + 1:len(guide) + guide_start], style="color: green; font-family: Courier,courier"), 
