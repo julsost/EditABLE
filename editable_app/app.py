@@ -4,6 +4,7 @@ import pandas as pd
 import re
 from datetime import date
 from datetime import datetime
+from pathlib import Path
 from utils import get_guides, almost_reverse_complement
 from shiny import App, render, ui, reactive
 from shiny.types import ImgData
@@ -26,8 +27,8 @@ def ui_card(title, *args):
 
 app_ui = ui.page_fluid(
     {"id": "main-content"},
-    #ui.panel_title('editABLE'),
     ui.output_image("display_logo", inline=True),
+    ui.output_image("stanford_logo", inline=True),
     ui.br(),
     ui.help_text(
         '''Welcome to editABLE! We have designed this tool to help to determine the type of gene editing most appropriate for a single gene edit. We prioritize finding base 
@@ -198,7 +199,7 @@ app_ui = ui.page_fluid(
     ui_card(
         "Results",
         ui.help_text(
-            "Note: there can be more than one base editing guide for a single desired edit, but we will only show the recommended PrimeDesign prime editing guide"
+            "Note: for base editing, there can be more than one guide RNA for a single desired edit, but for prime editing, we will only show the recommended PrimeDesign guide RNA"
         ),
         ui.br(),
         ui.br(),
@@ -508,10 +509,15 @@ def server(input, output, session):
     @output
     @render.image
     def display_logo():
-        from pathlib import Path
-
         dir = Path(__file__).resolve().parent
         img: ImgData = {"src": str(dir / "EditABLE-logos_transparent.png"), "width": "300px"}
+        return img
+
+    @output
+    @render.image
+    def stanford_logo():
+        dir = Path(__file__).resolve().parent
+        img: ImgData = {"src": str(dir / "SOM_Web_vert_LG.png"), "width": "300px"}
         return img
 
 app = App(app_ui, server)
