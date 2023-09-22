@@ -73,9 +73,9 @@ def get_guide_RNAs(mutant_seq, edit_type, genomic_location):
     elif edit_type == "T>C":
         return find_BE_guide_rnas("reverse", mutant_seq, genomic_location), "reverse"
     elif edit_type == "G>A":
-        return find_BE_guide_rnas("forward", mutant_seq, genomic_location), "forward"
-    elif edit_type == "C>T":
         return find_BE_guide_rnas("reverse", mutant_seq, genomic_location), "reverse"
+    elif edit_type == "C>T":
+        return find_BE_guide_rnas("forward", mutant_seq, genomic_location), "forward"
     elif edit_type == "G>C":
         return find_trans_guide_rnas("forward", mutant_seq, genomic_location), "forward"
     elif edit_type == "C>G":
@@ -137,7 +137,7 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM):
                     ng_distance_recommended = primedesign_output[10]
                     
                     df_dict['Original Sequence'].append(ref_sequence_original)
-                    df_dict['Edited Sequence'].append(edited_sequence_original)
+                    df_dict['Desired Sequence'].append(edited_sequence_original)
                     df_dict['Editing Technology'].append("Prime Editing")
                     df_dict['Base Editing Guide'].append(None)
                     
@@ -157,7 +157,7 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM):
                     df_dict['PrimeDesign ngRNA Bottom Top'].append(ng_spacer_bottom_recommended)
                 else:
                     df_dict['Original Sequence'].append(ref_sequence_original)
-                    df_dict['Edited Sequence'].append(edited_sequence_original)
+                    df_dict['Desired Sequence'].append(edited_sequence_original)
                     df_dict['Editing Technology'].append("No Base or Prime Editing Guides Found")
                     df_dict['Base Editing Guide'].append(None)
                     
@@ -180,7 +180,7 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM):
                     guide_rnas = [guide_rnas]
                 for gRNA in guide_rnas:
                     df_dict['Original Sequence'].append(ref_sequence_original)
-                    df_dict['Edited Sequence'].append(edited_sequence_original)
+                    df_dict['Desired Sequence'].append(edited_sequence_original)
                     df_dict['Editing Technology'].append("Base Editing")
                     df_dict['Base Editing Guide'].append(str(gRNA))
                     df_dict['Base Editing Guide Orientation'].append(orientation)
@@ -206,7 +206,7 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM):
         insertion_end = ref_sequence.rfind('-')
         if insertion_end - insertion_start + 1 > 44:
             df_dict['Original Sequence'].append(ref_sequence_original)
-            df_dict['Edited Sequence'].append(edited_sequence_original)
+            df_dict['Desired Sequence'].append(edited_sequence_original)
             df_dict['Editing Technology'].append("Use Twin Prime Editing/Integrase/HDR")
             df_dict['Base Editing Guide'].append(None)
             
@@ -241,7 +241,7 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM):
                 ng_distance_recommended = primedesign_output[10]
 
                 df_dict['Original Sequence'].append(ref_sequence_original)
-                df_dict['Edited Sequence'].append(edited_sequence_original)
+                df_dict['Desired Sequence'].append(edited_sequence_original)
                 df_dict['Editing Technology'].append("Prime Editing")
                 df_dict['Base Editing Guide'].append(None)
                 
@@ -261,7 +261,7 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM):
                 df_dict['PrimeDesign ngRNA Bottom Top'].append(ng_spacer_bottom_recommended)
             else:
                 df_dict['Original Sequence'].append(ref_sequence_original)
-                df_dict['Edited Sequence'].append(edited_sequence_original)
+                df_dict['Desired Sequence'].append(edited_sequence_original)
                 df_dict['Editing Technology'].append("Use Twin Prime Editing/Integrase/HDR")
                 df_dict['Base Editing Guide'].append(None)
                 
@@ -286,7 +286,7 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM):
         deletion_end = edited_sequence.rfind('-')
         if deletion_start - deletion_end + 1 > 80:
             df_dict['Original Sequence'].append(ref_sequence_original)
-            df_dict['Edited Sequence'].append(edited_sequence_original)
+            df_dict['Desired Sequence'].append(edited_sequence_original)
             df_dict['Editing Technology'].append("Use Twin Prime Editing/Integrase/HDR")
             df_dict['Base Editing Guide'].append(None)
             
@@ -321,7 +321,7 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM):
                 ng_distance_recommended = primedesign_output[10]
 
                 df_dict['Original Sequence'].append(ref_sequence_original)
-                df_dict['Edited Sequence'].append(edited_sequence_original)
+                df_dict['Desired Sequence'].append(edited_sequence_original)
                 df_dict['Editing Technology'].append("Prime Editing")
                 df_dict['Base Editing Guide'].append(None)
                 
@@ -341,7 +341,7 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM):
                 df_dict['PrimeDesign ngRNA Bottom Top'].append(ng_spacer_bottom_recommended)
             else:
                 df_dict['Original Sequence'].append(ref_sequence_original)
-                df_dict['Edited Sequence'].append(edited_sequence_original)
+                df_dict['Desired Sequence'].append(edited_sequence_original)
                 df_dict['Editing Technology'].append("Use Twin Prime Editing/Integrase/HDR")
                 df_dict['Base Editing Guide'].append(None)
                 
