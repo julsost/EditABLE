@@ -518,13 +518,12 @@ def server(input, output, session):
             nonlocal to_display_guides_df
             return render.DataGrid(
                 to_display_guides_df,
-                selection_mode='none',
                 width="100%",
                 filters=False,
                 summary=True,
             )
 
-        @render.download(filename=lambda: f"guides-{date.today().isoformat()}-{datetime.now().strftime('%H-%M-%S')}.csv")
+        @session.download(filename=lambda: f"guides-{date.today().isoformat()}-{datetime.now().strftime('%H-%M-%S')}.csv")
         async def download_results():
             nonlocal guides_df
             yield guides_df.to_csv()
