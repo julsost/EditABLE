@@ -474,6 +474,10 @@ def render_dataframe(df_dict):
     df_render = pd.DataFrame.from_dict(df_dict_render).dropna(how='all', axis=1)
     df_full = pd.DataFrame.from_dict(df_dict).dropna(how='all', axis=1)
 
+    # Drop the 'Base Editing Guide Orientation' column if it exists
+    if 'Base Editing Guide Orientation' in df_render.columns:
+        df_render = df_render.drop(columns=['Base Editing Guide Orientation'])
+
     # Conditionally filter 'Base Editing Guide' if it exists
     if 'Base Editing Guide' in df_render.columns:
         df_render = df_render[df_render['Base Editing Guide'].notna()]
