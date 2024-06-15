@@ -461,32 +461,23 @@ def update_df_dict_with_primedesign_output(df_dict, ref_sequence_original, edite
     df_dict['PrimeDesign ngRNA Oligo Top'].append(ng_spacer_top_recommended)
     df_dict['PrimeDesign ngRNA Bottom Top'].append(ng_spacer_bottom_recommended)
 
-#helper function prepare the data for output as a dataframe
 def render_dataframe(df_dict):
-    # Ensure all lists in df_dict have the same length
+    df_dict_render = collections.defaultdict(list)
     max_length = max(len(v) for v in df_dict.values())
-    for key in df_dict.keys():
+
+    for key in df_dict:
+        # Ensure each list has the same length by padding with None
         while len(df_dict[key]) < max_length:
             df_dict[key].append(None)
-    
-    df_dict_render = collections.defaultdict(list)
-    for key in df_dict:
-        if key != 'Base Editing Guide Orientation':
-            for value in df_dict[key]:
-                if key == 'Editing Technology' or key == 'PrimeDesign pegRNA Annotation':
-                    df_dict_render[key].append(value)
-                elif value is None:
-                    df_dict_render[key].append(None)
-                else:
-                    df_dict_render[key].append(value)
+        df_dict_render[key] = df_dict[key]
 
-    # Create the DataFrame
     df_render = pd.DataFrame.from_dict(df_dict_render).dropna(how='all', axis=1)
     df_full = pd.DataFrame.from_dict(df_dict).dropna(how='all', axis=1)
 
-    # Filter out rows where 'Base Editing Guide' is None or empty
-    df_render = df_render[df_render['Base Editing Guide'].notna()]
-    df_render = df_render[df_render['Base Editing Guide'] != '']
+    # Conditionally filter 'Base Editing Guide' if it exists
+    if 'Base Editing Guide' in df_render.columns:
+        df_render = df_render[df_render['Base Editing Guide'].notna()]
+        df_render = df_render[df_render['Base Editing Guide'] != '']
 
     return df_render, df_full
 
