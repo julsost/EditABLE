@@ -500,8 +500,8 @@ def server(input, output, session):
     @render.ui
     @reactive.event(input.get_guides)
     def run():
-        ref_sequence_input = input.ref_sequence_input()
-        edited_sequence_input = input.edited_sequence_input()
+        ref_sequence_input = "".join(input.ref_sequence_input().split()).upper()
+        edited_sequence_input = "".join(input.edited_sequence_input().split()).upper()
         PAM = input.pam_type()
         mutation_type = determine_mutation_type(ref_sequence_input, edited_sequence_input)
 
@@ -528,8 +528,8 @@ def server(input, output, session):
             nonlocal guides_df
             yield guides_df.to_csv()
 
-        ref_sequence_input = input.ref_sequence_input()
-        edited_sequence_input = input.edited_sequence_input()
+        ref_sequence_input = "".join(input.ref_sequence_input().split()).upper()
+        edited_sequence_input = "".join(input.edited_sequence_input().split()).upper()
 
         nonlocal input_file
         valid_inputs, message = input_check(ref_sequence_input, edited_sequence_input)
@@ -620,7 +620,7 @@ def server(input, output, session):
                 if not filtered_guides_df.empty:
                     ui_elements.append(
                         ui_card(
-                            "Recommended Editor",
+                            "Recommended Editor",  
                             "recommended_editor",
                             ui.help_text(f"Selected Editor: {editor_info}"),
                             ui.br(),
