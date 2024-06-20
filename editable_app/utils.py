@@ -542,20 +542,23 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM):
         else:
             return handle_deletions(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original)
 
-    set_pam_sequences(PAM)
-    ref_sequence, edited_sequence = create_mutable_sequences(ref_sequence_original, edited_sequence_original)
-    df_dict = collections.defaultdict(list)
+    try:
+        set_pam_sequences(PAM)
+        ref_sequence, edited_sequence = create_mutable_sequences(ref_sequence_original, edited_sequence_original)
+        df_dict = collections.defaultdict(list)
 
-    if len(set(ref_sequence) - bases) == 0:
-        substitution_position = identify_substitution_position(ref_sequence, edited_sequence)
-        edit = f"{ref_sequence[substitution_position]}>{edited_sequence[substitution_position]}"
-        pam_sequence_list = [PAM, 'NRN', 'NYN']
-        df_dict = handle_base_editing(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original, substitution_position, pam_sequence_list)
-    else:
-        df_dict = handle_insertion_or_deletion(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original)
+        if len(set(ref_sequence) - bases) == 0:
+            substitution_position = identify_substitution_position(ref_sequence, edited_sequence)
+            edit = f"{ref_sequence[substitution_position]}>{edited_sequence[substitution_position]}"
+            pam_sequence_list = [PAM, 'NRN', 'NYN']
+            df_dict = handle_base_editing(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original, substitution_position, pam_sequence_list)
+        else:
+            df_dict = handle_insertion_or_deletion(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original)
+    except Exception as e:
+        print(f"Error in get_guides: {e}")
+        add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original, "No Base or Prime Editing Guides Found")
 
     return render_dataframe(df_dict)
-
 
 # Helper functions
 def gc_content(sequence):
