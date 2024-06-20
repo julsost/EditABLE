@@ -2,14 +2,11 @@ import asyncio
 import os
 import pandas as pd
 import re
-from datetime import date
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from utils import get_guides, almost_reverse_complement, editor_data, determine_mutation_type, process_guide_rnas, get_cloning_url
 from shiny import App, render, ui, reactive
 from shiny.types import ImgData
-
-import numpy as np
 
 bases = {"A", "C", "G", "T"}
 accepted_bases = {"A", "C", "G", "T", "-"}
@@ -477,6 +474,9 @@ def server(input, output, session):
         else:
             return ui.div(ui.br(), ui.tags.b("Error: No file selected", style="color: red;", id='upload_status'))
 
+    
+    
+    
     @reactive.Effect()
     def clear():
         value = input.clear()    
@@ -502,6 +502,13 @@ def server(input, output, session):
     def run():
         ref_sequence_input = "".join(input.ref_sequence_input().split()).upper()
         edited_sequence_input = "".join(input.edited_sequence_input().split()).upper()
+        
+        # Call check_ref_edited_pair directly
+        valid, message = check_ref_edited_pair(ref_sequence_input, edited_sequence_input)
+        if not valid:
+            return ui.div(ui.tags.b(f"Error: {message}", style="color: red;"))
+        
+        
         PAM = input.pam_type()
         mutation_type = determine_mutation_type(ref_sequence_input, edited_sequence_input)
 
@@ -528,12 +535,8 @@ def server(input, output, session):
             nonlocal guides_df
             yield guides_df.to_csv()
 
-        ref_sequence_input = "".join(input.ref_sequence_input().split()).upper()
-        edited_sequence_input = "".join(input.edited_sequence_input().split()).upper()
-
         nonlocal input_file
         valid_inputs, message = input_check(ref_sequence_input, edited_sequence_input)
-        PAM = input.pam_type()
 
         if valid_inputs:
             if input_file and not (ref_sequence_input or edited_sequence_input):
@@ -561,24 +564,26 @@ def server(input, output, session):
                 base_editing_guides_df = guides_df[guides_df['Editing Technology'] == 'Base Editing']
                 
                 ui_elements = [
+                    ui.help_text(
+                        "Note: for base editing, there can be more than one guide RNA for a single desired edit, but for prime editing, we will only show the recommended PrimeDesign guide RNA"
+                    ),
+                    ui.br(),
+                    ui.br(),
+                    ui.output_data_frame("render_results"),
+                    ui.br(),
+                    ui.br(),
+                ]
+
+                ui_elements.append(ui.download_button("download_results", "Download Results as CSV File"))
+
+                return ui.TagList(
                     ui_card(
                         "Recommended Guide RNAs",
                         'results',
-                        ui.help_text(
-                            "Note: for base editing, there can be more than one guide RNA for a single desired edit, but for prime editing, we will only show the recommended PrimeDesign guide RNA"
-                        ),
-                        ui.br(),
-                        ui.br(),
-                        ui.output_data_frame("render_results"),
-                        ui.br(),
-                        ui.br(),
+                        *ui_elements
                     )
-                ]
-                
-                ui_elements.append(ui.download_button("download_results", "Download Results as CSV File"))
-                ui_elements.append(ui.br())  # Add this line to insert a line break
+                )
 
-                return ui.TagList(*ui_elements)
             elif ref_sequence_input and edited_sequence_input and not input_file:
                 ref_sequence_input = "".join(ref_sequence_input.split()).upper()
                 edited_sequence_input = "".join(edited_sequence_input.split()).upper()
@@ -604,17 +609,13 @@ def server(input, output, session):
                 filtered_guides_df = to_display_guides_df[to_display_guides_df['Editing Technology'].isin(['Base Editing', 'Prime Editing'])]
 
                 ui_elements = [
-                    ui_card(
-                        "Recommended Guide RNAs",
-                        'results',
-                        ui.help_text(
-                            "Note: for base editing, there can be more than one guide RNA for a single desired edit, but for prime editing, we will only show the recommended PrimeDesign guide RNA. "
-                        ),
-                        ui.br(),
-                        ui.br(),
-                        ui.output_data_frame("render_results"),
-                        ui.br(),
-                    )
+                    ui.help_text(
+                        "Note: for base editing, there can be more than one guide RNA for a single desired edit, but for prime editing, we will only show the recommended PrimeDesign guide RNA. "
+                    ),
+                    ui.br(),
+                    ui.br(),
+                    ui.output_data_frame("render_results"),
+                    ui.br(),
                 ]
 
                 if not filtered_guides_df.empty:
@@ -652,18 +653,19 @@ def server(input, output, session):
                             *list_of_guides_to_display
                         )
                     )
-
-                if not base_editing_guides_df.empty:
-                    validation_section = generate_experimental_validation_section(base_editing_guides_df, PAM)
-                    ui_elements.append(validation_section)
+                    ui_elements.append(generate_experimental_validation_section(base_editing_guides_df, PAM))
 
                 ui_elements.append(ui.download_button("download_results", "Download Results as CSV File"))
-                ui_elements.append(ui.br())  # Add this line to insert a line break
 
-                return ui.TagList(*ui_elements)
+                return ui.TagList(
+                    ui_card(
+                        "Recommended Guide RNAs",
+                        'results',
+                        *ui_elements
+                    )
+                )
         else:
             return ui.div(ui.tags.b(message, style="color: red;"))
-
 
     @output
     @render.image

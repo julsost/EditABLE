@@ -4,9 +4,7 @@ import regex as re
 from Bio.Seq import MutableSeq
 from Bio.SeqUtils import MeltingTemp as mt
 from math import log
-from itertools import product, combinations 
-import numpy as np
-import subprocess, os
+from itertools import combinations 
 import numpy as np
 from calculate_scores import calculate_on_target_scores, calculate_off_target_scores 
 
@@ -134,12 +132,10 @@ def track_positions(guide, ref_sequence_input, substitution_position, orientatio
     else:
         return "No"
 
-
-
 #helper function for experimental validation of base editing guide rnas
 def process_guide_rnas(guide_rnas):
     results = []
-    for guide_rna in guide_rnas:
+    for index, guide_rna in enumerate(guide_rnas):
         # Replace the first letter with G
         modified_guide_rna = 'G' + guide_rna[1:]
         
@@ -150,12 +146,12 @@ def process_guide_rnas(guide_rnas):
         reverse_complement_modified = reverse_guide[:-1] + 'C'
         
         # Format the output
-        result = f"5' - CACC {modified_guide_rna} - 3'\n5' - AAAC {reverse_complement_modified} - 3'"
+        result = f"Guide {index + 1}\n5' - CACC {modified_guide_rna} - 3'\n5' - AAAC {reverse_complement_modified} - 3'"
         results.append(result)
     
     return results
 
-
+#function to create array of protospacers with mutations
 def generate_mutations_to_single_base(guide_rnas, max_mutations=3):
     bases = {'A', 'C', 'G', 'T'}
     all_mutated_guides = []
@@ -247,8 +243,6 @@ def determine_mutation_type(ref_seq, edited_seq, pams=None):
             elif edit_type in ["C>G", "G>C"]:
                 return "transversion"   
     return mutation_type 
-
-
 
 # Helper function to find guide RNAs for transversion (C>G and G>C) mutations on forward/reverse strands
 def find_trans_guide_rnas(direction, seq, genomic_location):
@@ -445,10 +439,6 @@ def update_df_dict_with_primedesign_output(df_dict, ref_sequence_original, edite
     df_dict['Original Sequence'].append(ref_sequence_original)
     df_dict['Desired Sequence'].append(edited_sequence_original)
     df_dict['Editing Technology'].append(editing_technology)
-    df_dict['Base Editing Guide'].append(None)
-    df_dict['Off Target Score (Click To Toggle)'].append(None)
-    df_dict['On Target Score (Click To Toggle)'].append(None)
-    df_dict['Bystander Edits?'].append(None)
     df_dict['PrimeDesign pegRNA Annotation'].append(peg_annotation_recommended)
     df_dict['PrimeDesign pegRNA PBS'].append(peg_pbs_recommended)
     df_dict['PrimeDesign pegRNA RTT'].append(peg_rtt_recommended)
@@ -485,166 +475,33 @@ def render_dataframe(df_dict):
 
     return df_render, df_full
 
-
-
 def get_guides(ref_sequence_original, edited_sequence_original, PAM):
-    set_pam_sequences(PAM)
-    ref_sequence, edited_sequence = create_mutable_sequences(ref_sequence_original, edited_sequence_original)
-    df_dict = collections.defaultdict(list)
-
-    if len(set(ref_sequence) - bases) == 0:
-        substitution_position = identify_substitution_position(ref_sequence, edited_sequence)
-        edit = f"{ref_sequence[substitution_position]}>{edited_sequence[substitution_position]}"
-        guide_rnas, orientation, pams, azimuth_sequences = get_guide_rnas_and_orientation(ref_sequence, edit, substitution_position)
-        protospacers = generate_mutations_to_single_base(guide_rnas)
-
-        if guide_rnas == "NOT BASE EDITABLE":
+    def process_guide_rnas_for_pam(guide_rnas, azimuth_sequences, ref_sequence_original, edited_sequence_original, df_dict, ref_sequence, edited_sequence, substitution_position, orientation, pam):
+        if guide_rnas == "NO PAM":
+            return False  # Indicates that the next PAM should be tried
+        elif guide_rnas == "NOT BASE EDITABLE":
             primedesign_output = run_prime_design(ref_sequence, edited_sequence, substitution_position)
             if primedesign_output != "No PrimeDesign Recommended Guides":
                 update_df_dict_with_primedesign_output(df_dict, ref_sequence_original, edited_sequence_original, primedesign_output, "Prime Editing")
             else:
                 add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original, "No Base or Prime Editing Guides Found")
-        elif guide_rnas == "NO PAM":
-            # Rerun gRNA finder for base editing with NRN PAM
-            set_pam_sequences('NRN')
-            guide_rnas, orientation, pams, azimuth_sequences = get_guide_rnas_and_orientation(ref_sequence, edit, substitution_position)
-            if guide_rnas == "NO PAM":
-                # Rerun gRNA finder for base editing with NYN PAM
-                set_pam_sequences('NYN')
-                guide_rnas, orientation, pams, azimuth_sequences = get_guide_rnas_and_orientation(ref_sequence, edit, substitution_position)
-                if guide_rnas == "NO PAM":
-                    primedesign_output = run_prime_design(ref_sequence, edited_sequence, substitution_position)
-                    if primedesign_output != "No PrimeDesign Recommended Guides":
-                        update_df_dict_with_primedesign_output(df_dict, ref_sequence_original, edited_sequence_original, primedesign_output, "Prime Editing")
-                    else:
-                        add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original, "No Base or Prime Editing Guides Found")
-                else:
-                    
-                    #calculate off target score
-                    protospacers = generate_mutations_to_single_base(guide_rnas)
-                    if pams == set_pam_sequences("NGG"):
-                        combined_scores, average_scores = calculate_off_target_scores_for_guides(guide_rnas, pams)
-                    else:
-                        try:
-                            combined_scores, average_scores = calculate_off_target_scores_for_guides(guide_rnas, ["CGG"]*len(guide_rnas))
-                            
-                        
-                        except:
-                            print(f"Error in calculate_off_target_scores: {e}")
-                            print(f"Length of spacers: {len(guide_rnas*len(protospacers))}")
-                            print(f"Length of protospacers: {len(protospacers)}")
-
-                            print(f"Guide RNAs: {guide_rnas}")
-                            cfd_scores = {'score': [None] * len(guide_rnas)} 
-                            
-                 
-                    # Calculate on-target scores
-                    on_target_scores_df = calculate_on_target_scores(azimuth_sequences)
-                    
-                    # Print NYN PAM gRNAs
-                    if not isinstance(guide_rnas, list):
-                        guide_rnas = [guide_rnas]
-                    for gRNA, cfd_score, on_score in zip(guide_rnas, average_scores['score'],on_target_scores_df['score'] ):
-                        position_info = track_positions(gRNA, ref_sequence_original, substitution_position, orientation)
-                        
-                        df_dict['Original Sequence'].append(ref_sequence_original)
-                        df_dict['Desired Sequence'].append(edited_sequence_original)
-                        df_dict['Editing Technology'].append("Base Editing") #with NYN PAM
-                        df_dict['Base Editing Guide'].append(str(gRNA))
-                        df_dict['Base Editing Guide Orientation'].append(orientation)
-                        df_dict['Off Target Score (Click To Toggle)'].append(cfd_score)
-                        df_dict['On Target Score (Click To Toggle)'].append(on_score)
-                        df_dict['Bystander Edits?'].append(position_info)
-                        df_dict['PrimeDesign pegRNA Annotation'].append(None)
-                        df_dict['PrimeDesign pegRNA PBS'].append(None)
-                        df_dict['PrimeDesign pegRNA RTT'].append(None)
-                        df_dict['PrimeDesign pegRNA Spacer Oligo Top'].append(None)
-                        df_dict['PrimeDesign pegRNA Spacer Oligo Bottom'].append(None)
-                        df_dict['PrimeDesign pegRNA Extension Oligo Top'].append(None)
-                        df_dict['PrimeDesign pegRNA Extension Oligo Bottom'].append(None)
-                        df_dict['PrimeDesign ngRNA Annotation'].append(None)
-                        df_dict['PrimeDesign ngRNA Distance'].append(None)
-                        df_dict['PrimeDesign ngRNA Oligo Top'].append(None)
-                        df_dict['PrimeDesign ngRNA Bottom Top'].append(None)
-            else:   
-                #calculate off target score
-                
-                protospacers = generate_mutations_to_single_base(guide_rnas)
-                if pams == set_pam_sequences("NGG"):
-                    combined_scores, average_scores = calculate_off_target_scores_for_guides(guide_rnas, pams)
-
-                else:
-                    try:
-                        combined_scores, average_scores = calculate_off_target_scores_for_guides(guide_rnas, ["CGG"]*len(guide_rnas))
-                        
-                        
-                    except Exception as e:
-                        print(f"Error in calculate_off_target_scores: {e}")
-                        print(f"Length of spacers: {len(guide_rnas*len(protospacers))}")
-                        print(f"Length of protospacers: {len(protospacers)}")
-
-                        print(f"Guide RNAs: {guide_rnas}")
-                        cfd_scores = {'score': [None] * len(guide_rnas)} 
-                
-               
-                # Calculate on-target scores
-                on_target_scores_df = calculate_on_target_scores(azimuth_sequences)
-                # Print NRN PAM gRNAs
-                if not isinstance(guide_rnas, list):
-                    guide_rnas = [guide_rnas]
-                for gRNA, cfd_score, on_score in zip(guide_rnas, average_scores['score'],on_target_scores_df['score'] ):
-                    position_info = track_positions(gRNA, ref_sequence_original, substitution_position, orientation)
-                    
-                    df_dict['Original Sequence'].append(ref_sequence_original)
-                    df_dict['Desired Sequence'].append(edited_sequence_original)
-                    df_dict['Editing Technology'].append("Base Editing") #with nrn pam
-                    df_dict['Base Editing Guide'].append(str(gRNA))
-                    df_dict['Base Editing Guide Orientation'].append(orientation)
-                    df_dict['Base Editing Guide Orientation'].append(orientation)
-                    df_dict['Off Target Score (Click To Toggle)'].append(cfd_score)
-                    df_dict['On Target Score (Click To Toggle)'].append(on_score)
-                    df_dict['Bystander Edits?'].append(position_info)
-                    df_dict['PrimeDesign pegRNA Annotation'].append(None)
-                    df_dict['PrimeDesign pegRNA PBS'].append(None)
-                    df_dict['PrimeDesign pegRNA RTT'].append(None)
-                    df_dict['PrimeDesign pegRNA Spacer Oligo Top'].append(None)
-                    df_dict['PrimeDesign pegRNA Spacer Oligo Bottom'].append(None)
-                    df_dict['PrimeDesign pegRNA Extension Oligo Top'].append(None)
-                    df_dict['PrimeDesign pegRNA Extension Oligo Bottom'].append(None)
-                    df_dict['PrimeDesign ngRNA Annotation'].append(None)
-                    df_dict['PrimeDesign ngRNA Distance'].append(None)
-                    df_dict['PrimeDesign ngRNA Oligo Top'].append(None)
-                    df_dict['PrimeDesign ngRNA Bottom Top'].append(None)
+            return True  # Indicates that further processing is complete
         else:
-            
-            #calculate off target score
             protospacers = generate_mutations_to_single_base(guide_rnas)
-            if pams == set_pam_sequences("NGG"):
-                combined_scores, average_scores = calculate_off_target_scores_for_guides(guide_rnas, pams)
-               
-            else:    
-                try:
-                    combined_scores, average_scores = calculate_off_target_scores_for_guides(guide_rnas, ["CGG"]*len(guide_rnas))
-                    
-                   
-                except Exception as e:
-                    print(f"Error in calculate_off_target_scores: {e}")
-                    print(f"Length of spacers: {len(guide_rnas*len(protospacers))}")
-                    print(f"Length of protospacers: {len(protospacers)}")
+            try:
+                combined_scores, average_scores = calculate_off_target_scores_for_guides(guide_rnas, [pam] * len(guide_rnas))
+            except Exception as e:
+                print(f"Error in calculate_off_target_scores: {e}")
+                print(f"Guide RNAs: {guide_rnas}")
+                combined_scores, average_scores = pd.DataFrame(), pd.DataFrame()
 
-                    print(f"Guide RNAs: {guide_rnas}")
-                    cfd_scores = {'score': [None] * len(guide_rnas)} 
-            
-            
-            # Calculate on-target scores
             on_target_scores_df = calculate_on_target_scores(azimuth_sequences)
-            
-            # Print original PAM gRNAs
+
             if not isinstance(guide_rnas, list):
                 guide_rnas = [guide_rnas]
-            for gRNA, cfd_score, on_score in zip(guide_rnas, average_scores['score'],on_target_scores_df['score'] ):
+            for gRNA, cfd_score, on_score in zip(guide_rnas, average_scores['score'], on_target_scores_df['score']):
                 position_info = track_positions(gRNA, ref_sequence_original, substitution_position, orientation)
-                
+
                 df_dict['Original Sequence'].append(ref_sequence_original)
                 df_dict['Desired Sequence'].append(edited_sequence_original)
                 df_dict['Editing Technology'].append("Base Editing")
@@ -664,14 +521,41 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM):
                 df_dict['PrimeDesign ngRNA Distance'].append(None)
                 df_dict['PrimeDesign ngRNA Oligo Top'].append(None)
                 df_dict['PrimeDesign ngRNA Bottom Top'].append(None)
+            return True
 
-    elif '-' in ref_sequence:
-        df_dict = handle_insertions(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original)
-        
-    elif '-' in edited_sequence:
-        df_dict = handle_deletions(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original)
+    def handle_base_editing(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original, substitution_position, pam_sequence_list):
+        for pam in pam_sequence_list:
+            set_pam_sequences(pam)
+            guide_rnas, orientation, pams, azimuth_sequences = get_guide_rnas_and_orientation(ref_sequence, edit, substitution_position)
+            if process_guide_rnas_for_pam(guide_rnas, azimuth_sequences, ref_sequence_original, edited_sequence_original, df_dict, ref_sequence, edited_sequence, substitution_position, orientation, pam):
+                return df_dict
+        primedesign_output = run_prime_design(ref_sequence, edited_sequence, substitution_position)
+        if primedesign_output != "No PrimeDesign Recommended Guides":
+            update_df_dict_with_primedesign_output(df_dict, ref_sequence_original, edited_sequence_original, primedesign_output, "Prime Editing")
+        else:
+            add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original, "No Base or Prime Editing Guides Found")
+        return df_dict
 
-    return render_dataframe(df_dict) 
+    def handle_insertion_or_deletion(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original):
+        if '-' in ref_sequence:
+            return handle_insertions(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original)
+        else:
+            return handle_deletions(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original)
+
+    set_pam_sequences(PAM)
+    ref_sequence, edited_sequence = create_mutable_sequences(ref_sequence_original, edited_sequence_original)
+    df_dict = collections.defaultdict(list)
+
+    if len(set(ref_sequence) - bases) == 0:
+        substitution_position = identify_substitution_position(ref_sequence, edited_sequence)
+        edit = f"{ref_sequence[substitution_position]}>{edited_sequence[substitution_position]}"
+        pam_sequence_list = [PAM, 'NRN', 'NYN']
+        df_dict = handle_base_editing(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original, substitution_position, pam_sequence_list)
+    else:
+        df_dict = handle_insertion_or_deletion(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original)
+
+    return render_dataframe(df_dict)
+
 
 # Helper functions
 def gc_content(sequence):
