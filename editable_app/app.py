@@ -190,7 +190,7 @@ app_ui = ui.page_fluid(
         ui.input_text_area("edited_sequence_input", "Desired Sequence", placeholder="Enter sequence", height="50%", width="100%"),
         ui.output_ui("ui_input_file"),
         ui.input_action_button("upload", "Upload File", class_="btn-primary"),
-        ui.output_ui("upload_status"),
+        ui.output_ui("upload_input"),
         ui.br(),
         ui.input_select("pam_type", "Select Desired Base Editing PAM", {"NGN": "NGN (Recommended)", "NGG": "NGG (Most Efficient)", "NGA" : "NGA", "NNGRRT" : "NNGRRT (SaCas9)", "NNNRRT" : "NNNRRT (SaCas9-KKH)", "NRN" : "NRN (SpRY)"}),
         ui.input_action_button("get_guides", "Find Guides", class_="btn-primary"),
