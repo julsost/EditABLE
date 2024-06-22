@@ -29,7 +29,7 @@ def find_BE_guide_rnas(direction, seq, genomic_location):
         else:
             guideRNAs = []
             pams = []
-            azimuth_sequences = []
+            sequences = []
             for match in re.finditer(PAMs, str(possible_pams), overlapped=True):
                 gRNA = seq[start_pams + match.start() - gRNA_size: start_pams + match.start()]
                 pam = possible_pams[match.start(): match.start() + pam_length]
@@ -37,13 +37,10 @@ def find_BE_guide_rnas(direction, seq, genomic_location):
                 pams.append(str(pam))
                 start_idx = start_pams + match.start() - gRNA_size - 4
                 end_idx = start_pams + match.start() + pam_length + 3
-                azimuth_sequence = seq[start_idx:end_idx]
-                azimuth_sequences.append(str(azimuth_sequence))
-                
-               
-                
-            #azimuth_sequences = update_azimuth_sequences(azimuth_sequences, pam_length)
-            return guideRNAs, pams, azimuth_sequences
+                sequence = seq[start_idx:end_idx]
+                sequences.append(str(sequence))
+    
+            return guideRNAs, pams, sequences
 
     elif direction == "reverse":
         start_pams = genomic_location - gRNA_size + edit_start - pam_length
@@ -54,7 +51,7 @@ def find_BE_guide_rnas(direction, seq, genomic_location):
         else:
             guideRNAs = []
             pams = []
-            azimuth_sequences = []
+            sequences = []
             for match in re.finditer(reverse_PAMs, str(possible_pams), overlapped=True):
                 gRNA_start = start_pams + match.start() + pam_length
                 gRNA_end = gRNA_start + gRNA_size
@@ -64,18 +61,59 @@ def find_BE_guide_rnas(direction, seq, genomic_location):
                 pams.append(str(pam.reverse_complement()))  # Correct the PAM to be the reverse complement
                 start_idx = start_pams + match.start() - 3
                 end_idx = start_pams + match.start() + gRNA_size + pam_length + 4
-                azimuth_sequence = seq[start_idx:end_idx].reverse_complement()
-                azimuth_sequences.append(str(azimuth_sequence))
-                
-            #azimuth_sequences = update_azimuth_sequences(azimuth_sequences, pam_length)
-            return guideRNAs, pams, azimuth_sequences
+                sequence = seq[start_idx:end_idx].reverse_complement()
+                sequences.append(str(sequence))
+            
+            return guideRNAs, pams, sequences
+    else:
+        return "ERROR"
+    
+ 
+ # Helper function to find guide RNAs for transversion (C>G and G>C) mutations on forward/reverse strands    
+def find_CGB_guide_rnas(direction, seq, genomic_location):
+    guideRNAs = []
+    pams = []
+    sequences = []
+
+    if direction == "forward":
+        pam = seq[genomic_location + 15: genomic_location + 15 + pam_length]
+        if len(re.findall(PAMs, str(pam))) == 0:
+            return "NO PAM"
+        else:
+            guideRNA = seq[genomic_location + 15 - gRNA_size: genomic_location + 15]
+            guideRNAs.append(str(guideRNA))
+            pams.append(str(pam))
+            start_idx = genomic_location + 15 - gRNA_size - 4
+            end_idx = genomic_location + 15 + pam_length + 3
+            sequence = seq[start_idx:end_idx]
+            sequences.append(str(sequence))
+
+    elif direction == "reverse":
+        pam = seq[genomic_location - 15 - 1: genomic_location - 15 - 1 + pam_length]
+        if len(re.findall(reverse_PAMs, str(pam))) == 0:
+            return "NO PAM"
+        else:
+            guideRNA = seq[genomic_location - 15 - 1 + pam_length: genomic_location - 15 - 1 + pam_length + gRNA_size]
+            guideRNA.reverse_complement(inplace=True)
+            guideRNAs.append(str(guideRNA))
+            pams.append(str(pam.reverse_complement()))  # Correct the PAM to be the reverse complement
+            start_idx = genomic_location - 15 - 1 + pam_length - 4
+            end_idx = genomic_location - 15 - 1 + pam_length + gRNA_size + 3
+            sequence = seq[start_idx:end_idx].reverse_complement()
+            sequences.append(str(sequence))
+            
+        print(f"guide rnas: {guideRNAs}")
+        print(f"pams: {pams}")
+
     else:
         return "ERROR"
 
+    return guideRNAs, pams, sequences
+
 # dictionary for guide rna cloning plasmid
 pam_to_url = {
-    "NNNRRT_NNGRRT_NNGRR": (70709,  "https://www.addgene.org/70709"),
-    "NGG_NGN_NRN_NYN_NGA": (140580, "https://www.addgene.org/140580")
+    "NNNRRT_NNGRRT_NNGRR": ( 'BPK2660', '70709',  "https://www.addgene.org/70709"),
+    "NGG_NGN_NRN_NYN_NGA": ('pmCherry-U6-empty', '140580', "https://www.addgene.org/140580")
 }
 
 def get_cloning_url(pam):
@@ -91,9 +129,9 @@ def get_cloning_url(pam):
     }
     
     cloning_group = pam_patterns.get(pam)
-    url = pam_to_url.get(cloning_group)
+    url_info = pam_to_url.get(cloning_group)
     
-    return url
+    return url_info
  
 #helper function to track position of base to edit within the guide rna and then return potential bystander edits   
 def track_positions(guide, ref_sequence_input, substitution_position, orientation):
@@ -150,6 +188,26 @@ def process_guide_rnas(guide_rnas):
         results.append(result)
     
     return results
+
+def process_prime_guide_rnas(pegRNA_oligo_top):
+    results = []
+    guide_rnas = [oligo[4:24] for oligo in pegRNA_oligo_top if oligo]  # Extract the guide RNA sequences
+    for index, guide_rna in enumerate(guide_rnas):
+        # Replace the first letter with G
+        modified_guide_rna = 'G' + guide_rna[1:]
+        
+        # Generate the reverse complement
+        reverse_guide = str(reverse_complement(modified_guide_rna))
+        
+        # Replace the last letter of the reverse complement with C
+        reverse_complement_modified = reverse_guide[:-1] + 'C'
+        
+        # Format the output
+        result = f"5' - CACC {modified_guide_rna} - 3'\n5' - AAAC {reverse_complement_modified} - 3'"
+        results.append(result)
+    
+    return results
+
 
 #function to create array of protospacers with mutations
 def generate_mutations_to_single_base(guide_rnas, max_mutations=3):
@@ -214,7 +272,7 @@ editor_data = {
         'NNNRRT': ('BE3-SaCas-KKH', '85170', 'https://www.addgene.org/85170'),
         'NRN' : ('SpRY', '139999', 'https://www.addgene.org/139999/')
     },
-    'transversion': {
+    'CGB': {
         'NGN' : ('UdgX-HF-nCas9','163559','https://www.addgene.org/163559/' ),
         'NGG': ('UdgX-HF-nCas9','163559','https://www.addgene.org/163559/' ),
         'NGA': ('UdgX-HF-nCas9','163559','https://www.addgene.org/163559/'),
@@ -228,7 +286,7 @@ editor_data = {
 }    
 
 #determine the mutation type for the base editors
-def determine_mutation_type(ref_seq, edited_seq, pams=None):
+def get_editor_info(ref_seq, edited_seq, pams):
     mutation_type = "PrimeEditor"  # Default mutation type is PrimeEditor
     for ref_base, edit_base in zip(ref_seq, edited_seq):
         if ref_base != edit_base:
@@ -237,31 +295,12 @@ def determine_mutation_type(ref_seq, edited_seq, pams=None):
             
             # Determine the type of base editing required based on the mutation
             if edit_type in ["A>G", "T>C"]:
-                return "ABE"
+                mutation_type = "ABE"
             elif edit_type in ["G>A", "C>T"]:
-                return "CBE"
+                mutation_type = "CBE"
             elif edit_type in ["C>G", "G>C"]:
-                return "transversion"   
-    return mutation_type 
-
-# Helper function to find guide RNAs for transversion (C>G and G>C) mutations on forward/reverse strands
-def find_trans_guide_rnas(direction, seq, genomic_location):
-    if direction == "forward":
-        pam = seq[genomic_location + 15 : genomic_location + 15 + pam_length]
-        if len(re.findall(PAMs, str(pam))) == 0:
-            return "NO PAM"
-        else:
-            return seq[genomic_location + 15 - gRNA_size : genomic_location + 15]
-    elif direction == "reverse":
-        pam = seq[genomic_location - 15 - 1: genomic_location - 15 - 1 + pam_length]
-        if len(re.findall(reverse_PAMs, str(pam))) == 0:
-            return "NO PAM"
-        else:
-            gRNA = seq[genomic_location - 15 - 1 + pam_length: genomic_location - 15 - 1 + pam_length + gRNA_size]
-            gRNA.reverse_complement(inplace=True)
-            return gRNA
-    else:
-        return "ERROR"
+                mutation_type = "CGB"   
+    return editor_data[mutation_type].get(pams, editor_data['PrimeEditor']['default'])
 
 
 # Adds the base editable guide RNAs to the data table for export
@@ -291,13 +330,13 @@ def get_guide_RNAs(mutant_seq, edit_type, genomic_location):
                 return (("NO PAM", None, None), None)
             return result, "forward"
         elif edit_type == "G>C":
-            result = find_trans_guide_rnas("forward", mutant_seq, genomic_location)
+            result = find_CGB_guide_rnas("forward", mutant_seq, genomic_location)
            
             if result == "NO PAM":
                 return (("NO PAM", None, None), None)
             return result, "forward"
         elif edit_type == "C>G":
-            result = find_trans_guide_rnas("reverse", mutant_seq, genomic_location)
+            result = find_CGB_guide_rnas("reverse", mutant_seq, genomic_location)
            
             if result == "NO PAM":
                 return (("NO PAM", None, None), None)
@@ -363,9 +402,9 @@ def get_guide_rnas_and_orientation(ref_sequence, edit, substitution_position):
         if result is None or result[0] is None:
             raise ValueError("Invalid result from get_guide_RNAs")
         
-        (guide_rnas, pams, azimuth_sequences), orientation = result
+        (guide_rnas, pams, sequences), orientation = result
         
-        return guide_rnas, orientation, pams, azimuth_sequences
+        return guide_rnas, orientation, pams, sequences
     
     except ValueError as ve:
         print(f"ValueError: {ve}")
@@ -476,7 +515,7 @@ def render_dataframe(df_dict):
     return df_render, df_full
 
 def get_guides(ref_sequence_original, edited_sequence_original, PAM):
-    def process_guide_rnas_for_pam(guide_rnas, azimuth_sequences, ref_sequence_original, edited_sequence_original, df_dict, ref_sequence, edited_sequence, substitution_position, orientation, pam):
+    def process_guide_rnas_for_pam(guide_rnas, sequences, ref_sequence_original, edited_sequence_original, df_dict, ref_sequence, edited_sequence, substitution_position, orientation, pam):
         if guide_rnas == "NO PAM":
             return False  # Indicates that the next PAM should be tried
         elif guide_rnas == "NOT BASE EDITABLE":
@@ -495,7 +534,7 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM):
                 print(f"Guide RNAs: {guide_rnas}")
                 combined_scores, average_scores = pd.DataFrame(), pd.DataFrame()
 
-            on_target_scores_df = calculate_on_target_scores(azimuth_sequences)
+            on_target_scores_df = calculate_on_target_scores(sequences)
 
             if not isinstance(guide_rnas, list):
                 guide_rnas = [guide_rnas]
@@ -526,8 +565,8 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM):
     def handle_base_editing(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original, substitution_position, pam_sequence_list):
         for pam in pam_sequence_list:
             set_pam_sequences(pam)
-            guide_rnas, orientation, pams, azimuth_sequences = get_guide_rnas_and_orientation(ref_sequence, edit, substitution_position)
-            if process_guide_rnas_for_pam(guide_rnas, azimuth_sequences, ref_sequence_original, edited_sequence_original, df_dict, ref_sequence, edited_sequence, substitution_position, orientation, pam):
+            guide_rnas, orientation, pams, sequences = get_guide_rnas_and_orientation(ref_sequence, edit, substitution_position)
+            if process_guide_rnas_for_pam(guide_rnas, sequences, ref_sequence_original, edited_sequence_original, df_dict, ref_sequence, edited_sequence, substitution_position, orientation, pam):
                 return df_dict
         primedesign_output = run_prime_design(ref_sequence, edited_sequence, substitution_position)
         if primedesign_output != "No PrimeDesign Recommended Guides":
@@ -559,6 +598,8 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM):
         add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original, "No Base or Prime Editing Guides Found")
 
     return render_dataframe(df_dict)
+
+
 
 # Helper functions
 def gc_content(sequence):

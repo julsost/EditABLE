@@ -4,7 +4,7 @@ import pandas as pd
 import re
 from datetime import date, datetime
 from pathlib import Path
-from utils import get_guides, almost_reverse_complement, editor_data, determine_mutation_type, process_guide_rnas, get_cloning_url
+from utils import get_guides, almost_reverse_complement, get_editor_info, process_guide_rnas, get_cloning_url, process_prime_guide_rnas
 from shiny import App, render, ui, reactive
 from shiny.types import ImgData
 
@@ -28,9 +28,9 @@ app_ui = ui.page_fluid(
     ui.output_image("stanford_logo", inline=True),
     ui.br(),
     ui.help_text(
-        '''Welcome to editABLE! We have designed this tool to help to determine the type of gene editing most appropriate for a single gene edit. We prioritize finding base 
-        editing reagents, as they have higher reported editing efficiency. Under conditions where base editing is not currently possible, we provide a first pass analysis for 
-        reagents needed for prime editing. Please refer to the following papers for more information on base and prime editing:'''
+        '''Welcome to editABLE! We have designed this tool as a starting point for determining the optimal gene editing tool for a single gene edit. 
+        Our algorithm is pending publication, but at a high level, it prioritizes base editing due to greater efficiency followed by prime editing. 
+        Please refer to the following papers for more information on base and prime editing:'''
     ),
     ui.br(),
     ui.br(),
@@ -285,6 +285,43 @@ def check_ref_edited_pair(ref_sequence, edited_sequence):
                 return False, f"There must be at least 25 base pairs of sequence after the desired edit. {len(ref_sequence) - 1 - current_dash_position} base pairs were found after your edit."
     return True, "Inputs verified. Proceed to get guides."
 
+def generate_prime_protocals_section(guides_df):
+    # Extract the oligos from the DataFrame
+    oligos = guides_df["PrimeDesign pegRNA Spacer Oligo Top"].tolist()
+    print("Oligos:", oligos)  # Debug print
+    
+    # Process the guide RNAs
+    processed_oligos = process_prime_guide_rnas(oligos)
+    print("Processed Oligos:", processed_oligos)  # Debug print
+
+    # Create the prime section UI elements
+    prime_section = [
+        ui.help_text(
+            ui.tags.span("1. Order the following paired pegRNA Spacer Oligos from "),
+            ui.tags.a("IDT", href="https://www.idtdna.com", target="_blank"),
+            ui.tags.span(" (or other preferred vendor):")
+        ),
+        ui.br(),
+        ui.br(),
+    ]
+    
+    # Add each processed guide RNA to the prime section
+    for guide_rna in processed_oligos:
+        guide_rna_parts = guide_rna.split('\n')
+        for part in guide_rna_parts:
+            prime_section.append(ui.help_text(part))
+            prime_section.append(ui.br())
+        prime_section.append(ui.br())
+    
+    prime_section.extend([
+        ui.help_text(
+            ui.tags.span("2. Follow Cloning Protocol "),
+            ui.tags.span("here.", href="placeholder", target="_blank"),
+        ),
+    ])
+    return ui_card("Prime Editing Cloning Protocal", 'prime_section', *prime_section)
+
+
 
 def generate_experimental_validation_section(guides_df, pam_type):
     # Extract the guide RNAs from the DataFrame
@@ -294,14 +331,14 @@ def generate_experimental_validation_section(guides_df, pam_type):
     processed_guide_rnas = process_guide_rnas(guide_rnas)
     
     # Get the cloning URL based on PAM type
-    cloning_id, cloning_url = get_cloning_url(pam_type)
+    cloning_name, cloning_id, cloning_url = get_cloning_url(pam_type)
     
     # Create the validation section UI elements
     validation_section = [
         ui.help_text(
             ui.tags.span("1. Order the following paired oligos from "),
             ui.tags.a("IDT", href="https://www.idtdna.com", target="_blank"),
-            ui.tags.span(" (or other preferred vendor).")
+            ui.tags.span(" (or other preferred vendor):")
         ),
         ui.br(),
         ui.br(),
@@ -316,18 +353,15 @@ def generate_experimental_validation_section(guides_df, pam_type):
         validation_section.append(ui.br())  # Add a double space between guide RNAs
     
     validation_section.extend([
-        ui.br(),
         ui.help_text(
-            ui.tags.span("2. Purchase Guide RNA cloning plasmid from "),
-            ui.tags.a("Addgene", href=cloning_url, target="_blank"),
-            ui.tags.span(f" (Addgene: {cloning_id}).")
+            ui.tags.span("2. Purchase Guide RNA cloning plasmid from Addgene "),
+            ui.tags.a(f"(Addgene: {cloning_id}).", href=cloning_url, target="_blank")
         ),
         ui.br(),
         ui.br(),
         ui.help_text(
             ui.tags.span("3. Follow Cloning Protocol "),
-            ui.tags.a("here", href="https://media.addgene.org/cms/filer_public/6d/d8/6dd83407-3b07-47db-8adb-4fada30bde8a/zhang-lab-general-cloning-protocol-target-sequencing_1.pdf", target="_blank"),
-            ui.tags.span(".")
+            ui.tags.a("here.", href="https://media.addgene.org/cms/filer_public/6d/d8/6dd83407-3b07-47db-8adb-4fada30bde8a/zhang-lab-general-cloning-protocol-target-sequencing_1.pdf", target="_blank"),
         ),
     ])
     
@@ -428,10 +462,7 @@ def generate_base_editing_visualization(guides_df, ref_sequence_input, substitut
 
 
 def server(input, output, session):
-    #Function to get editor info based on PAM and mutation type
-    def get_editor_info(pam_type, mutation_type):
-        return editor_data[mutation_type].get(pam_type, editor_data['PrimeEditor']['default'])
-
+    
     def input_check(ref_sequence_input, edited_sequence_input):
         nonlocal input_file
         if input_file and not (ref_sequence_input or edited_sequence_input):
@@ -508,12 +539,15 @@ def server(input, output, session):
         if not valid:
             return ui.div(ui.tags.b(f"Error: {message}", style="color: red;"))
         
-        
         PAM = input.pam_type()
-        mutation_type = determine_mutation_type(ref_sequence_input, edited_sequence_input)
 
-        editor_name, editor_id, editor_url = get_editor_info(PAM, mutation_type)
-        editor_info = f"{editor_name} (Addgene: {editor_id}, {editor_url})"
+         #defining variables to find enzyme protein on addgene in suggested addgene plasmid section
+        editor_name, editor_id, editor_url = get_editor_info(ref_sequence_input, edited_sequence_input, PAM)
+        editor_info = f"{editor_name} (Addgene: {editor_id})"
+        
+        #defining variables to find guide rna cloning plasmid on addgene in suggested addgene plasmid section
+        cloning_name, cloning_id, cloning_url = get_cloning_url(PAM)
+        plasmid_info = f"{cloning_name} (Addgene: {cloning_id})"
         
         to_display_guides_df, guides_df = get_guides(ref_sequence_input, edited_sequence_input, PAM)
         base_editing_guides_df = guides_df[guides_df['Editing Technology'] == 'Base Editing']
@@ -610,7 +644,8 @@ def server(input, output, session):
 
                 ui_elements = [
                     ui.help_text(
-                        "Note: for base editing, there can be more than one guide RNA for a single desired edit, but for prime editing, we will only show the recommended PrimeDesign guide RNA. "
+                        '''Note: for base editing, there can be more than one guide RNA for a single desired edit, but for prime editing, we will only show the recommended PrimeDesign guide RNA. The off-target score is calculated using the CFD score algorithm (Doench et al. 2014) where a higher score indicates a lower likelihood of off-target activity (higher is better). The on-target score is calculated using the RuleSet1 algorithm where a higher score indicates greater efficiency of guide RNA binding to the genomic target sequence (higher is better). Both algorithms are from ''',
+                        ui.tags.a('Doench et al. 2014 Nat Biotechnol.', {'href': 'https://pubmed.ncbi.nlm.nih.gov/25184501/', 'target': '_blank'})
                     ),
                     ui.br(),
                     ui.br(),
@@ -618,15 +653,31 @@ def server(input, output, session):
                     ui.br(),
                 ]
 
-                if not filtered_guides_df.empty:
+                if 'Base Editing' in filtered_guides_df['Editing Technology'].values:
                     ui_elements.append(
                         ui_card(
-                            "Recommended Editor",  
+                            "Suggested Addgene Plasmids",  
                             "recommended_editor",
-                            ui.help_text(f"Selected Editor: {editor_info}"),
+                            ui.help_text(f"Recommended Base Editing Plasmid: {editor_info}"),
+                            ui.br(),
+                            ui.help_text(f"Recommended Guide RNA Plasmid: {plasmid_info}"),
                             ui.br(),
                             ui.br(),
-                            ui.tags.a("View on Addgene", href=editor_url, target="_blank", class_="btn btn-primary"),
+                            ui.tags.a("View Base Editing Plasmid", href=editor_url, target="_blank", class_="btn btn-primary"),
+                            ui.help_text(" "),
+                            ui.tags.a("View Guide RNA Plasmid", href=cloning_url, target="_blank", class_="btn btn-primary"),
+                        )
+                    )
+                    
+                if 'Prime Editing' in filtered_guides_df['Editing Technology'].values:
+                    ui_elements.append(
+                        ui_card(
+                            "Suggested Addgene Plasmid",  
+                            "recommended_prime_editor",
+                            ui.help_text(f"Recommended Prime Editing Plasmid: {editor_info}"),
+                            ui.br(),
+                            ui.br(),
+                            ui.tags.a("View Prime Editing Plasmid", href=editor_url, target="_blank", class_="btn btn-primary"),
                         )
                     )
 
@@ -654,7 +705,10 @@ def server(input, output, session):
                         )
                     )
                     ui_elements.append(generate_experimental_validation_section(base_editing_guides_df, PAM))
-
+                    
+                if 'Prime Editing' in filtered_guides_df['Editing Technology'].values:
+                    ui_elements.append(generate_prime_protocals_section(prime_editing_guides_df))
+                    
                 ui_elements.append(ui.download_button("download_results", "Download Results as CSV File"))
 
                 return ui.TagList(
