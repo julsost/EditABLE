@@ -4,7 +4,7 @@ import pandas as pd
 import re
 from datetime import date, datetime
 from pathlib import Path
-from utils import get_guides, almost_reverse_complement, get_editor_info, process_guide_rnas, get_cloning_url, process_prime_guide_rnas
+from utils import get_guides, almost_reverse_complement, get_editor_info, process_guide_rnas, get_cloning_url, process_ng_rnas,  process_peg_rnas
 from shiny import App, render, ui, reactive
 from shiny.types import ImgData
 
@@ -28,7 +28,7 @@ app_ui = ui.page_fluid(
     ui.output_image("stanford_logo", inline=True),
     ui.br(),
     ui.help_text(
-        '''Welcome to editABLE! We have designed this tool as a starting point for determining the optimal gene editing tool for a single gene edit. 
+        '''Welcome to EditABLE! We have designed this tool as a starting point for determining the optimal gene editing tool for a single gene edit. 
         Our algorithm is pending publication, but at a high level, it prioritizes base editing due to greater efficiency followed by prime editing. 
         Please refer to the following papers for more information on base and prime editing:'''
     ),
@@ -130,7 +130,7 @@ app_ui = ui.page_fluid(
             ui.tags.b("GATAGCTCAGCTAGCCTAGTCAAACCTATC", style="font-family: Courier,courier"), 
             ui.tags.b("ATT", style="color: red; font-family: Courier,courier"), 
             ui.tags.b("ACGTCGATCGATCGATCACACCGCCTAATC", style="font-family: Courier,courier"),
-        ),
+        ), 
         ui.br(),
         ui.br(),
         ui.help_text("Desired Sequence:"),
@@ -167,6 +167,13 @@ app_ui = ui.page_fluid(
         ui.br(),
         ui.br(),
         ui.help_text(
+        ui.tags.span("Please limit the length of the insertion or deletion to less than 40 nucleotides as prime editors have been primarily tested in this context. Refer to  "),
+        ui.tags.a("Anzalone et al. 2019 Nature", href="https://pubmed.ncbi.nlm.nih.gov/31634902/", target="_blank"),
+        ui.tags.span(" for more information.")
+    ),
+        ui.br(),
+        ui.br(),
+        ui.help_text(
             '''Then, use the "Select Desired Base Editing PAM" dropdown to select the base editing PAM that is desired.'''
         ),
         ui.br(),
@@ -177,7 +184,7 @@ app_ui = ui.page_fluid(
             '''. So in each of the examples above, there must be 25 or more base pairs to the right and left 
             of the ''',
             ui.tags.b("red", style="color: red"),
-            ''' highlighted regions.'''
+            ''' highlighted regions. '''
         )
     ),
     ui_card(
@@ -285,43 +292,128 @@ def check_ref_edited_pair(ref_sequence, edited_sequence):
                 return False, f"There must be at least 25 base pairs of sequence after the desired edit. {len(ref_sequence) - 1 - current_dash_position} base pairs were found after your edit."
     return True, "Inputs verified. Proceed to get guides."
 
+def create_prime_editing_plasmid_card(guides_df, editor_info, editor_url):
+    pegRNA_oligos = guides_df["PrimeDesign pegRNA Spacer Oligo Top"].tolist()
+    ngRNA_oligos = guides_df["PrimeDesign ngRNA Oligo Top"].tolist()
+    
+    processed_pegRNA_oligos = process_peg_rnas(pegRNA_oligos) if pegRNA_oligos and any(pegRNA_oligos) else None
+    processed_ngRNA_oligos = process_ng_rnas(ngRNA_oligos) if ngRNA_oligos and any(ngRNA_oligos) and ngRNA_oligos[0] != 'n/a' else None
+    
+    prime_card_elements = [
+        ui.help_text(f"Recommended Prime Editing Plasmid: {editor_info}"),
+        ui.br(),
+
+    ]
+    
+    # Add the recommended pegRNA plasmid information if pegRNA oligos are not empty
+    if processed_pegRNA_oligos:
+        prime_card_elements.append(ui.help_text("Recommended pegRNA Plasmid: pU6-tevopreq1-GG-acceptor (Addgene: 174038)"))
+        prime_card_elements.append(ui.br())
+    
+    # Add the recommended ngRNA plasmid information if ngRNA oligos are not empty
+    if processed_ngRNA_oligos:
+        prime_card_elements.append(ui.help_text("Recommended ngRNA Plasmid: pmCherry-U6-empty (Addgene: 140580)"))
+        prime_card_elements.append(ui.br())
+    
+    prime_card_elements.append(ui.br())
+    
+    # Add buttons at the bottom next to each other
+    prime_card_elements.append(
+        ui.div(
+            {"class": "d-flex"},
+            ui.tags.a("View Prime Editing Plasmid", href=editor_url, target="_blank", class_="btn btn-primary me-2"),
+            ui.tags.a("View pegRNA Plasmid", href="https://www.addgene.org/174038/", target="_blank", class_="btn btn-primary me-2") if processed_pegRNA_oligos else None,
+            ui.tags.a("View ngRNA Plasmid", href="https://www.addgene.org/65777/", target="_blank", class_="btn btn-primary") if processed_ngRNA_oligos else None,
+        )
+    )
+    
+    return ui_card(
+        "Suggested Addgene Plasmids",  
+        "recommended_prime_editor",
+        *[element for element in prime_card_elements if element is not None]  # Filter out None elements
+    )
+
+
 def generate_prime_protocals_section(guides_df):
     # Extract the oligos from the DataFrame
-    oligos = guides_df["PrimeDesign pegRNA Spacer Oligo Top"].tolist()
-    print("Oligos:", oligos)  # Debug print
-    
-    # Process the guide RNAs
-    processed_oligos = process_prime_guide_rnas(oligos)
-    print("Processed Oligos:", processed_oligos)  # Debug print
+    pegRNA_oligos = guides_df["PrimeDesign pegRNA Spacer Oligo Top"].tolist()
+    ngRNA_oligos = guides_df["PrimeDesign ngRNA Oligo Top"].tolist()
 
-    # Create the prime section UI elements
+    # Initialize the prime section UI elements
     prime_section = [
         ui.help_text(
-            ui.tags.span("1. Order the following paired pegRNA Spacer Oligos from "),
+            ui.tags.b("pegRNA:", style="text-decoration: bold"),
+            ui.br(),
+            ui.tags.span("1. Order the following pegRNA as a geneBlock from "),
             ui.tags.a("IDT", href="https://www.idtdna.com", target="_blank"),
             ui.tags.span(" (or other preferred vendor):")
         ),
         ui.br(),
         ui.br(),
     ]
-    
-    # Add each processed guide RNA to the prime section
-    for guide_rna in processed_oligos:
-        guide_rna_parts = guide_rna.split('\n')
-        for part in guide_rna_parts:
-            prime_section.append(ui.help_text(part))
-            prime_section.append(ui.br())
-        prime_section.append(ui.br())
+
+    # Process and add pegRNA oligos if they are present and valid
+    if pegRNA_oligos and any(pegRNA_oligos):
+        processed_pegRNA_oligos = process_peg_rnas(pegRNA_oligos)
+        if processed_pegRNA_oligos:
+            for guide_rna in processed_pegRNA_oligos:
+                guide_rna_parts = guide_rna.split('\n')
+                for part in guide_rna_parts:
+                    prime_section.append(ui.help_text(part))
+                    prime_section.append(ui.br())
+                prime_section.append(ui.br())
     
     prime_section.extend([
-        ui.help_text(
-            ui.tags.span("2. Follow Cloning Protocol "),
-            ui.tags.span("here.", href="placeholder", target="_blank"),
-        ),
-    ])
-    return ui_card("Prime Editing Cloning Protocal", 'prime_section', *prime_section)
+    ui.help_text(
+        ui.tags.span("2. Digest geneBlock using "),
+        ui.tags.a("BsaI enzyme.", href="https://www.neb.com/en-us/products/r3733-bsai-hf-v2", target="_blank"),
+    ),
+])
+    prime_section.extend([
+    ui.help_text(
+        ui.br(),
+        ui.br(),
+        ui.tags.span("3. Follow Cloning Protocol here for "),
+        ui.tags.a("pegRNA plasmid.", href="https://drive.google.com/file/d/1kKD7EVwS7nZMbiZ6UH4LftK7GepoS8si/view", target="_blank"),
+    ),
+])
+    
+    prime_section.append(ui.br())
+    prime_section.append(ui.br())
+    
+    # Process and add ngRNA oligos if they are present and valid
+    if ngRNA_oligos and any(ngRNA_oligos) and ngRNA_oligos[0] != 'n/a':
+        processed_ngRNA_oligos = process_ng_rnas(ngRNA_oligos)
+        if processed_ngRNA_oligos:
+            prime_section.append(ui.help_text(   
+                ui.tags.b("ngRNA:", style="text-decoration: bold"),  
+                ui.br(), 
+                ui.tags.span("1. Order the following paired ngRNA Oligos from "),
+                ui.tags.a("IDT", href="https://www.idtdna.com", target="_blank"),
+                ui.tags.span(" (or other preferred vendor):")
+        ) )
+            #displaying the ng rna oligo top and bottom
+            prime_section.append(ui.br())
+            prime_section.append(ui.br())
+            for guide_rna in processed_ngRNA_oligos:
+                guide_rna_parts = guide_rna.split('\n')
+                for part in guide_rna_parts:
+                    prime_section.append(ui.help_text(part))
+                    prime_section.append(ui.br())
+                prime_section.append(ui.br())
+                
+                #adding cloning protocal for ng rna
+                prime_section.extend([
+                    ui.help_text(
+                        ui.tags.span("2. Follow Cloning Protocol here for "),
+                        ui.tags.a("ngRNA plasmid.", href="https://media.addgene.org/cms/filer_public/6d/d8/6dd83407-3b07-47db-8adb-4fada30bde8a/zhang-lab-general-cloning-protocol-target-sequencing_1.pdf", target="_blank"),
+                    ),
+                ])
 
+    prime_section.append(ui.br())
+    prime_section.append(ui.br())
 
+    return ui_card("Experimental Validation of Prime Editing", 'prime_section', *prime_section)
 
 def generate_experimental_validation_section(guides_df, pam_type):
     # Extract the guide RNAs from the DataFrame
@@ -329,9 +421,6 @@ def generate_experimental_validation_section(guides_df, pam_type):
     
     # Process the guide RNAs
     processed_guide_rnas = process_guide_rnas(guide_rnas)
-    
-    # Get the cloning URL based on PAM type
-    cloning_name, cloning_id, cloning_url = get_cloning_url(pam_type)
     
     # Create the validation section UI elements
     validation_section = [
@@ -354,13 +443,7 @@ def generate_experimental_validation_section(guides_df, pam_type):
     
     validation_section.extend([
         ui.help_text(
-            ui.tags.span("2. Purchase Guide RNA cloning plasmid from Addgene "),
-            ui.tags.a(f"(Addgene: {cloning_id}).", href=cloning_url, target="_blank")
-        ),
-        ui.br(),
-        ui.br(),
-        ui.help_text(
-            ui.tags.span("3. Follow Cloning Protocol "),
+            ui.tags.span("2. Follow Cloning Protocol "),
             ui.tags.a("here.", href="https://media.addgene.org/cms/filer_public/6d/d8/6dd83407-3b07-47db-8adb-4fada30bde8a/zhang-lab-general-cloning-protocol-target-sequencing_1.pdf", target="_blank"),
         ),
     ])
@@ -458,9 +541,6 @@ def generate_base_editing_visualization(guides_df, ref_sequence_input, substitut
                 list_of_guides_to_display.append(ui.br())
     return list_of_guides_to_display
 
-
-
-
 def server(input, output, session):
     
     def input_check(ref_sequence_input, edited_sequence_input):
@@ -505,9 +585,6 @@ def server(input, output, session):
         else:
             return ui.div(ui.br(), ui.tags.b("Error: No file selected", style="color: red;", id='upload_status'))
 
-    
-    
-    
     @reactive.Effect()
     def clear():
         value = input.clear()    
@@ -644,7 +721,7 @@ def server(input, output, session):
 
                 ui_elements = [
                     ui.help_text(
-                        '''Note: for base editing, there can be more than one guide RNA for a single desired edit, but for prime editing, we will only show the recommended PrimeDesign guide RNA. The off-target score is calculated using the CFD score algorithm (Doench et al. 2014) where a higher score indicates a lower likelihood of off-target activity (higher is better). The on-target score is calculated using the RuleSet1 algorithm where a higher score indicates greater efficiency of guide RNA binding to the genomic target sequence (higher is better). Both algorithms are from ''',
+                        '''Note: for base editing, there can be more than one guide RNA for a single desired edit, but for prime editing, we will only show the recommended PrimeDesign guide RNA. If your selected pam is unavailible, see NRN or NYN pams for base editing. The off-target score is calculated using the CFD score algorithm (Doench et al. 2014) where a higher score indicates a lower likelihood of off-target activity (higher is better). The on-target score is calculated using the RuleSet1 algorithm where a higher score indicates greater efficiency of guide RNA binding to the genomic target sequence (higher is better). Both algorithms are from ''',
                         ui.tags.a('Doench et al. 2014 Nat Biotechnol.', {'href': 'https://pubmed.ncbi.nlm.nih.gov/25184501/', 'target': '_blank'})
                     ),
                     ui.br(),
@@ -670,16 +747,9 @@ def server(input, output, session):
                     )
                     
                 if 'Prime Editing' in filtered_guides_df['Editing Technology'].values:
-                    ui_elements.append(
-                        ui_card(
-                            "Suggested Addgene Plasmid",  
-                            "recommended_prime_editor",
-                            ui.help_text(f"Recommended Prime Editing Plasmid: {editor_info}"),
-                            ui.br(),
-                            ui.br(),
-                            ui.tags.a("View Prime Editing Plasmid", href=editor_url, target="_blank", class_="btn btn-primary"),
-                        )
-                    )
+                    prime_editing_plasmid_card = create_prime_editing_plasmid_card(guides_df, editor_info, editor_url)
+                    ui_elements.append(prime_editing_plasmid_card)
+
 
                 if 'Base Editing' in filtered_guides_df['Editing Technology'].values:
                     ui_elements.append(

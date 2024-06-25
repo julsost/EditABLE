@@ -189,25 +189,34 @@ def process_guide_rnas(guide_rnas):
     
     return results
 
-def process_prime_guide_rnas(pegRNA_oligo_top):
+
+def process_ng_rnas(oligo_top):
     results = []
-    guide_rnas = [oligo[4:24] for oligo in pegRNA_oligo_top if oligo]  # Extract the guide RNA sequences
+    guide_rnas = [oligo[4:24] for oligo in oligo_top if oligo and oligo != 'n/a']  # Extract the guide RNA sequences
     for index, guide_rna in enumerate(guide_rnas):
-        # Replace the first letter with G
-        modified_guide_rna = 'G' + guide_rna[1:]
-        
+
         # Generate the reverse complement
-        reverse_guide = str(reverse_complement(modified_guide_rna))
-        
-        # Replace the last letter of the reverse complement with C
-        reverse_complement_modified = reverse_guide[:-1] + 'C'
-        
+        reverse_guide = str(reverse_complement(guide_rna))
+
         # Format the output
-        result = f"5' - CACC {modified_guide_rna} - 3'\n5' - AAAC {reverse_complement_modified} - 3'"
+        result = f"5' - CACC {guide_rna} - 3'\n5' - AAAC {reverse_guide} - 3'"
         results.append(result)
-    
+
     return results
 
+def process_peg_rnas(oligo_top):
+    results = []
+    guide_rnas = [oligo[4:24] for oligo in oligo_top if oligo and oligo != 'n/a']  # Extract the guide RNA sequences
+    for index, guide_rna in enumerate(guide_rnas):
+        
+        # Generate the reverse complement
+        reverse_guide = str(reverse_complement(guide_rna))
+
+        # Format the output
+        result = f"5' - ACGggtctcg CACC {guide_rna} GTTTTAGAGCTAGAAATAGCAAGTTAAAATAAGGCTAGTCCGTTATCAACTTGAAAAAGTGGCACCGAGTCGGTGC {reverse_guide} CGCG ggagaccGTA - 3'"
+        results.append(result)
+
+    return results
 
 #function to create array of protospacers with mutations
 def generate_mutations_to_single_base(guide_rnas, max_mutations=3):
@@ -281,7 +290,7 @@ editor_data = {
         'NRN' : ('UdgX-HF-nCas9','163559','https://www.addgene.org/163559/')
     },
     'PrimeEditor': {
-    'default': ('PE6D', '207854', 'https://www.addgene.org/207854/')
+    'default': ('PE2', '132775', 'https://www.addgene.org/132775')
     },
 }    
 
@@ -464,13 +473,13 @@ def add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequen
     df_dict['PrimeDesign pegRNA PBS'].append(None)
     df_dict['PrimeDesign pegRNA RTT'].append(None)
     df_dict['PrimeDesign pegRNA Spacer Oligo Top'].append(None)
-    df_dict['PrimeDesign pegRNA Spacer Oligo Bottom'].append(None)
+    #df_dict['PrimeDesign pegRNA Spacer Oligo Bottom'].append(None)
     df_dict['PrimeDesign pegRNA Extension Oligo Top'].append(None)
-    df_dict['PrimeDesign pegRNA Extension Oligo Bottom'].append(None)
+    #df_dict['PrimeDesign pegRNA Extension Oligo Bottom'].append(None)
     df_dict['PrimeDesign ngRNA Annotation'].append(None)
     df_dict['PrimeDesign ngRNA Distance'].append(None)
     df_dict['PrimeDesign ngRNA Oligo Top'].append(None)
-    df_dict['PrimeDesign ngRNA Bottom Top'].append(None)
+    #df_dict['PrimeDesign ngRNA Bottom Top'].append(None)
 
 #helper function to update the dataframe dictionary with prime design output
 def update_df_dict_with_primedesign_output(df_dict, ref_sequence_original, edited_sequence_original, primedesign_output, editing_technology):
@@ -482,13 +491,13 @@ def update_df_dict_with_primedesign_output(df_dict, ref_sequence_original, edite
     df_dict['PrimeDesign pegRNA PBS'].append(peg_pbs_recommended)
     df_dict['PrimeDesign pegRNA RTT'].append(peg_rtt_recommended)
     df_dict['PrimeDesign pegRNA Spacer Oligo Top'].append(peg_spacer_top_recommended)
-    df_dict['PrimeDesign pegRNA Spacer Oligo Bottom'].append(peg_spacer_bottom_recommended)
+    #df_dict['PrimeDesign pegRNA Spacer Oligo Bottom'].append(peg_spacer_bottom_recommended)
     df_dict['PrimeDesign pegRNA Extension Oligo Top'].append(peg_ext_top_recommended)
-    df_dict['PrimeDesign pegRNA Extension Oligo Bottom'].append(peg_ext_bottom_recommended)
+    #df_dict['PrimeDesign pegRNA Extension Oligo Bottom'].append(peg_ext_bottom_recommended)
     df_dict['PrimeDesign ngRNA Annotation'].append(ng_annotation_recommended)
-    df_dict['PrimeDesign ngRNA Distance'].append(ng_distance_recommended)
+    #df_dict['PrimeDesign ngRNA Distance'].append(ng_distance_recommended)
     df_dict['PrimeDesign ngRNA Oligo Top'].append(ng_spacer_top_recommended)
-    df_dict['PrimeDesign ngRNA Bottom Top'].append(ng_spacer_bottom_recommended)
+    #df_dict['PrimeDesign ngRNA Bottom Top'].append(ng_spacer_bottom_recommended)
 
 def render_dataframe(df_dict):
     df_dict_render = collections.defaultdict(list)
@@ -553,13 +562,13 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM):
                 df_dict['PrimeDesign pegRNA PBS'].append(None)
                 df_dict['PrimeDesign pegRNA RTT'].append(None)
                 df_dict['PrimeDesign pegRNA Spacer Oligo Top'].append(None)
-                df_dict['PrimeDesign pegRNA Spacer Oligo Bottom'].append(None)
+                #df_dict['PrimeDesign pegRNA Spacer Oligo Bottom'].append(None)
                 df_dict['PrimeDesign pegRNA Extension Oligo Top'].append(None)
-                df_dict['PrimeDesign pegRNA Extension Oligo Bottom'].append(None)
+                #df_dict['PrimeDesign pegRNA Extension Oligo Bottom'].append(None)
                 df_dict['PrimeDesign ngRNA Annotation'].append(None)
-                df_dict['PrimeDesign ngRNA Distance'].append(None)
+                #df_dict['PrimeDesign ngRNA Distance'].append(None)
                 df_dict['PrimeDesign ngRNA Oligo Top'].append(None)
-                df_dict['PrimeDesign ngRNA Bottom Top'].append(None)
+                #df_dict['PrimeDesign ngRNA Bottom Top'].append(None)
             return True
 
     def handle_base_editing(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original, substitution_position, pam_sequence_list):
