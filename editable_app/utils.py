@@ -271,7 +271,8 @@ editor_data = {
         'NGA': ('ABE8e-NG enzyme', '138491', 'https://www.addgene.org/138491'),
         'NNGRRT': ('ABE8e-SaCas enzyme', '138500', 'https://www.addgene.org/138500'),
         'NNNRRT': ('ABE8e-SaCas-KKH enzyme', '138502', 'https://www.addgene.org/138502'),
-        'NRN': ('SpRY', '140003', 'https://www.addgene.org/140003/')
+        'NRN': ('SpRY', '140003', 'https://www.addgene.org/140003/'),
+        'NYN': ('SpRY', '140003', 'https://www.addgene.org/140003/')
     },
     'CBE': {
         'NGN': ('BE4max-NG', '138159', 'https://www.addgene.org/138159'),
@@ -279,7 +280,8 @@ editor_data = {
         'NGA': ('BE4max-NG', '138159', 'https://www.addgene.org/138159'),
         'NNGRRT': ('BE3-SaCas', '85169', 'https://www.addgene.org/85169'),
         'NNNRRT': ('BE3-SaCas-KKH', '85170', 'https://www.addgene.org/85170'),
-        'NRN' : ('SpRY', '139999', 'https://www.addgene.org/139999/')
+        'NRN' : ('SpRY', '139999', 'https://www.addgene.org/139999/'),
+        'NYN' : ('SpRY', '139999', 'https://www.addgene.org/139999/')
     },
     'CGB': {
         'NGN' : ('UdgX-HF-nCas9','163559','https://www.addgene.org/163559/' ),
@@ -287,7 +289,8 @@ editor_data = {
         'NGA': ('UdgX-HF-nCas9','163559','https://www.addgene.org/163559/'),
         'NNGRRT': ('UdgX-HF-nCas9','163559','https://www.addgene.org/163559/'),
         'NNNRRT': ('UdgX-HF-nCas9','163559','https://www.addgene.org/163559/'),
-        'NRN' : ('UdgX-HF-nCas9','163559','https://www.addgene.org/163559/')
+        'NRN' : ('UdgX-HF-nCas9','163559','https://www.addgene.org/163559/'),
+        'NYN' : ('UdgX-HF-nCas9','163559','https://www.addgene.org/163559/')
     },
     'PrimeEditor': {
     'default': ('PE2', '132775', 'https://www.addgene.org/132775')
@@ -515,12 +518,15 @@ def render_dataframe(df_dict):
     # Drop the 'Base Editing Guide Orientation' column if it exists
     if 'Base Editing Guide Orientation' in df_render.columns:
         df_render = df_render.drop(columns=['Base Editing Guide Orientation'])
-
+        
+    if 'Base Editing Guide Pam' in df_render.columns:
+        df_render = df_render.drop(columns=['Base Editing Guide Pam'])
+ 
     # Conditionally filter 'Base Editing Guide' if it exists
     if 'Base Editing Guide' in df_render.columns:
         df_render = df_render[df_render['Base Editing Guide'].notna()]
         df_render = df_render[df_render['Base Editing Guide'] != '']
-
+    
     return df_render, df_full
 
 def get_guides(ref_sequence_original, edited_sequence_original, PAM):
@@ -555,6 +561,7 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM):
                 df_dict['Editing Technology'].append("Base Editing")
                 df_dict['Base Editing Guide'].append(str(gRNA))
                 df_dict['Base Editing Guide Orientation'].append(orientation)
+                df_dict['Base Editing Guide Pam'].append(pam)
                 df_dict['Off Target Score (Click To Toggle)'].append(cfd_score)
                 df_dict['On Target Score (Click To Toggle)'].append(on_score)
                 df_dict['Bystander Edits?'].append(position_info)
