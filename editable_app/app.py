@@ -231,6 +231,10 @@ app_ui = ui.page_fluid(
     ui.br(),
     ui.br(),
 )
+def check_availible_pam(PAM, selected_PAM):
+    if (PAM == "NRN") or (PAM == "NYN"): 
+        if (selected_PAM != "NRN"):
+            return f"{selected_PAM} PAM not found, see {PAM} PAM"
 
 def check_ref_edited_pair(ref_sequence, edited_sequence):
     if len(ref_sequence) == 0 or len(edited_sequence) == 0:
@@ -376,16 +380,14 @@ def generate_prime_protocals_section(guides_df):
         ui.tags.span("3. Follow Cloning Protocol here for "),
         ui.tags.a("pegRNA plasmid.", href="https://drive.google.com/file/d/1kKD7EVwS7nZMbiZ6UH4LftK7GepoS8si/view", target="_blank"),
     ),
-])
-    
-    prime_section.append(ui.br())
-    prime_section.append(ui.br())
-    
+]) 
     # Process and add ngRNA oligos if they are present and valid
     if ngRNA_oligos and any(ngRNA_oligos) and ngRNA_oligos[0] != 'n/a':
         processed_ngRNA_oligos = process_ng_rnas(ngRNA_oligos)
         if processed_ngRNA_oligos:
             prime_section.append(ui.help_text(   
+                ui.br(),
+                ui.br(),
                 ui.tags.b("ngRNA:", style="text-decoration: bold"),  
                 ui.br(), 
                 ui.tags.span("1. Order the following paired ngRNA Oligos from "),
@@ -616,7 +618,17 @@ def server(input, output, session):
         if not valid:
             return ui.div(ui.tags.b(f"Error: {message}", style="color: red;"))
         
-        PAM = input.pam_type()
+        selected_PAM = input.pam_type()
+        
+        to_display_guides_df, guides_df = get_guides(ref_sequence_input, edited_sequence_input, selected_PAM)
+        base_editing_guides_df = guides_df[guides_df['Editing Technology'] == 'Base Editing']
+        prime_editing_guides_df = guides_df[guides_df['Editing Technology'] == 'Prime Editing']
+        
+        if not base_editing_guides_df.empty:
+            pams = guides_df["Base Editing Guide Pam"].tolist()
+            PAM = pams[0]
+        else:
+            PAM = selected_PAM
 
          #defining variables to find enzyme protein on addgene in suggested addgene plasmid section
         editor_name, editor_id, editor_url = get_editor_info(ref_sequence_input, edited_sequence_input, PAM)
@@ -625,10 +637,6 @@ def server(input, output, session):
         #defining variables to find guide rna cloning plasmid on addgene in suggested addgene plasmid section
         cloning_name, cloning_id, cloning_url = get_cloning_url(PAM)
         plasmid_info = f"{cloning_name} (Addgene: {cloning_id})"
-        
-        to_display_guides_df, guides_df = get_guides(ref_sequence_input, edited_sequence_input, PAM)
-        base_editing_guides_df = guides_df[guides_df['Editing Technology'] == 'Base Editing']
-        prime_editing_guides_df = guides_df[guides_df['Editing Technology'] == 'Prime Editing']
 
         @output
         @render.data_frame
@@ -726,10 +734,18 @@ def server(input, output, session):
                     ),
                     ui.br(),
                     ui.br(),
-                    ui.output_data_frame("render_results"),
-                    ui.br(),
                 ]
-
+                
+                message = check_availible_pam(PAM, selected_PAM)
+                if message:
+                    ui_elements.append(ui.help_text(ui.tags.b(f"{message}", style="color: red;")))
+                    ui_elements.append(ui.br(),)
+                    
+                ui_elements.append(
+                    ui.output_data_frame("render_results"),
+                )
+                ui_elements.append(ui.br(),)
+                
                 if 'Base Editing' in filtered_guides_df['Editing Technology'].values:
                     ui_elements.append(
                         ui_card(
