@@ -231,10 +231,19 @@ app_ui = ui.page_fluid(
     ui.br(),
     ui.br(),
 )
+
+#checks if no guides found
+def check_for_BE_or_PE_guides(guides_df):
+    no_BE_or_PE = guides_df[guides_df['Editing Technology'].isin(['No Base or Prime Editing Guides Found'])]
+    if not no_BE_or_PE.empty:
+        return "No Prime Editing or Base Editing Guide RNAs available for this site. In this case, we recommend the use of CRISPR with homologous recombination. See this paper here: "
+
+
+#checks if pam defaults to nrn or nyn bc no guide rnas for selected pam
 def check_availible_pam(PAM, selected_PAM):
     if (PAM == "NRN") or (PAM == "NYN"): 
         if (selected_PAM != "NRN"):
-            return f"{selected_PAM} PAM not found, see {PAM} PAM"
+            return f"No Guide RNAs available with {selected_PAM} PAM. See available NRN PAMs below:"
 
 def check_ref_edited_pair(ref_sequence, edited_sequence):
     if len(ref_sequence) == 0 or len(edited_sequence) == 0:
@@ -623,6 +632,10 @@ def server(input, output, session):
         to_display_guides_df, guides_df = get_guides(ref_sequence_input, edited_sequence_input, selected_PAM)
         base_editing_guides_df = guides_df[guides_df['Editing Technology'] == 'Base Editing']
         prime_editing_guides_df = guides_df[guides_df['Editing Technology'] == 'Prime Editing']
+        
+        message = check_for_BE_or_PE_guides(guides_df)
+        if message: 
+            return ui.div(ui.tags.b(f"{message}", style="color: red;"), ui.tags.a("https://www.nature.com/articles/nprot.2013.143", href=" https://www.nature.com/articles/nprot.2013.143", target="_blank", style="color: red;"),)
         
         if not base_editing_guides_df.empty:
             pams = guides_df["Base Editing Guide Pam"].tolist()
