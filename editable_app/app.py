@@ -196,7 +196,10 @@ app_ui = ui.page_fluid(
         ui.input_action_button("upload", "Upload File", class_="btn-primary"),
         ui.output_ui("upload_input"),
         ui.br(),
-        ui.input_select("pam_type", "Select Desired Base Editing PAM", {"NGN": "NGN (Recommended)", "NGG": "NGG (Most Efficient)", "NGA" : "NGA", "NNGRRT" : "NNGRRT (SaCas9)", "NNNRRT" : "NNNRRT (SaCas9-KKH)", "NRN" : "NRN (SpRY)"}),
+        #ui.input_select("pam_type", "Select Desired Base Editing PAM", {"NGN": "NGN (Recommended)", "NGG": "NGG (Most Efficient)", "NGA" : "NGA", "NNGRRT" : "NNGRRT (SaCas9)", "NNNRRT" : "NNNRRT (SaCas9-KKH)", "NRN" : "NRN (SpRY)"}),
+        ui.input_action_button("advanced_settings_toggle", "Advanced User Settings", class_="btn-secondary"),
+        ui.output_ui("advanced_settings"),
+        ui.br(),
         ui.input_action_button("get_guides", "Find Guides", class_="btn-primary"),
         ui.help_text(" "),
         ui.input_action_button("clear", "Clear Inputs", class_="btn-danger"),
@@ -238,12 +241,10 @@ def check_for_BE_or_PE_guides(guides_df):
     if not no_BE_or_PE.empty:
         return "No Prime Editing or Base Editing Guide RNAs available for this site. In this case, we recommend the use of CRISPR with homologous recombination. See this paper here: "
 
-
 #checks if pam defaults to nrn or nyn bc no guide rnas for selected pam
 def check_availible_pam(PAM, selected_PAM):
-    if (PAM == "NRN") or (PAM == "NYN"): 
-        if (selected_PAM != "NRN"):
-            return f"No Guide RNAs available with {selected_PAM} PAM. See available NRN PAMs below:"
+    if PAM != selected_PAM:
+        return f'No Guide RNAs available with {selected_PAM} PAM. See available {PAM} PAMs below:'
 
 def check_ref_edited_pair(ref_sequence, edited_sequence):
     if len(ref_sequence) == 0 or len(edited_sequence) == 0:
@@ -583,6 +584,7 @@ def server(input, output, session):
             return False, "Error: Fill in both text input fields or upload a CSV file."
     
     input_file = None
+    user_selected_pam = reactive.Value("")
 
     @output
     @render.ui
@@ -615,6 +617,24 @@ def server(input, output, session):
         input.clear()  
         return ui.input_file(f"file1", 'Choose a CSV File of Sequences to Upload (note that you must click the blue "Upload File" button even if the progress bar under the file browser says "Upload complete". Also, clicking the button will cause the screen to scroll up to the top which is annoying and we are trying to fix that):', accept='.csv', multiple=False, width="100%"),
         
+    
+    @output
+    @render.ui
+    def advanced_settings():
+        if input.advanced_settings_toggle() % 2 == 1:
+            return ui.input_select("pam_type", "Select Desired Base Editing PAM", {"NGN": "NGN (Recommended)", "NGG": "NGG (Most Efficient)", "NGA" : "NGA", "NNGRRT" : "NNGRRT (SaCas9)", "NNNRRT" : "NNNRRT (SaCas9-KKH)", "NRN" : "NRN (SpRY)"})
+        else:
+            return ui.div()
+
+    @reactive.Effect()
+    def handle_pam_selection():
+        if input.advanced_settings_toggle() % 2 == 1:
+            user_selected_pam.set(input.pam_type())
+        else:
+            user_selected_pam.set("")
+
+
+    
     @output
     @render.ui
     @reactive.event(input.get_guides)
@@ -627,18 +647,22 @@ def server(input, output, session):
         if not valid:
             return ui.div(ui.tags.b(f"Error: {message}", style="color: red;"))
         
-        selected_PAM = input.pam_type()
+       #PAM selection logic for user selected or default
+        selected_PAM = user_selected_pam.get() or "NGG"  # Default to NGG if no PAM is selected
         
+        
+        #tells users to try other pams if default isnt avaiilible
+        if not selected_PAM:
+            return ui.div(ui.tags.b("Guide RNAs may be available for alternative PAM sites, see advanced settings above to re-run with alternative PAMs", style="color: red;"))
+        
+        #establishes guide df and filters for prime and base editing and both 
         to_display_guides_df, guides_df = get_guides(ref_sequence_input, edited_sequence_input, selected_PAM)
         base_editing_guides_df = guides_df[guides_df['Editing Technology'] == 'Base Editing']
         prime_editing_guides_df = guides_df[guides_df['Editing Technology'] == 'Prime Editing']
-        
-        message = check_for_BE_or_PE_guides(guides_df)
-        if message: 
-            return ui.div(ui.tags.b(f"{message}", style="color: red;"), ui.tags.a("https://www.nature.com/articles/nprot.2013.143", href=" https://www.nature.com/articles/nprot.2013.143", target="_blank", style="color: red;"),)
+        filtered_guides_df = to_display_guides_df[to_display_guides_df['Editing Technology'].isin(['Base Editing', 'Prime Editing'])]
         
         if not base_editing_guides_df.empty:
-            pams = guides_df["Base Editing Guide Pam"].tolist()
+            pams = guides_df["PAM"].tolist()
             PAM = pams[0]
         else:
             PAM = selected_PAM
@@ -650,6 +674,11 @@ def server(input, output, session):
         #defining variables to find guide rna cloning plasmid on addgene in suggested addgene plasmid section
         cloning_name, cloning_id, cloning_url = get_cloning_url(PAM)
         plasmid_info = f"{cloning_name} (Addgene: {cloning_id})"
+
+        #if no prime or base editing guides found it outputs a message
+        message = check_for_BE_or_PE_guides(guides_df)
+        if message: 
+            return ui.div(ui.tags.b(f"{message}", style="color: red;"), ui.tags.a("https://www.nature.com/articles/nprot.2013.143", href=" https://www.nature.com/articles/nprot.2013.143", target="_blank", style="color: red;"),)
 
         @output
         @render.data_frame
@@ -710,7 +739,7 @@ def server(input, output, session):
 
                 return ui.TagList(
                     ui_card(
-                        "Recommended Guide RNAs",
+                        "Results",
                         'results',
                         *ui_elements
                     )
@@ -737,27 +766,27 @@ def server(input, output, session):
 
                 list_of_guides_to_display = generate_base_editing_visualization(guides_df, ref_sequence_input, substitution_position, PAM)
 
-                # Filter for Base Editing or Prime Editing guides only
-                filtered_guides_df = to_display_guides_df[to_display_guides_df['Editing Technology'].isin(['Base Editing', 'Prime Editing'])]
 
-                ui_elements = [
-                    ui.help_text(
-                        '''Note: for base editing, there can be more than one guide RNA for a single desired edit, but for prime editing, we will only show the recommended PrimeDesign guide RNA. If your selected pam is unavailible, see NRN or NYN pams for base editing. The off-target score is calculated using the CFD score algorithm (Doench et al. 2014) where a higher score indicates a lower likelihood of off-target activity (higher is better). The on-target score is calculated using the RuleSet1 algorithm where a higher score indicates greater efficiency of guide RNA binding to the genomic target sequence (higher is better). Both algorithms are from ''',
+
+                ui_elements = []
+                
+                if user_selected_pam.get():
+                    message = check_availible_pam(PAM, selected_PAM)
+                    if message:
+                        ui_elements.append(ui.help_text(ui.tags.b(f"{message}", style="color: red;")))
+                        ui_elements.append(ui.br(),)
+                    
+                ui_elements.append(ui_card(
+                        "Recommended Guide RNAs",
+                        'guides_df',
+                        ui.help_text(
+                        '''Note: for base editing, there can be more than one guide RNA for a single desired edit, but for prime editing, we will only show the recommended PrimeDesign guide RNA. The off-target score is calculated using the CFD score algorithm (Doench et al. 2014) where a higher score indicates a lower likelihood of off-target activity (higher is better). The on-target score is calculated using the RuleSet1 algorithm where a higher score indicates greater efficiency of guide RNA binding to the genomic target sequence (higher is better). Both algorithms are from ''',
                         ui.tags.a('Doench et al. 2014 Nat Biotechnol.', {'href': 'https://pubmed.ncbi.nlm.nih.gov/25184501/', 'target': '_blank'})
                     ),
                     ui.br(),
                     ui.br(),
-                ]
-                
-                message = check_availible_pam(PAM, selected_PAM)
-                if message:
-                    ui_elements.append(ui.help_text(ui.tags.b(f"{message}", style="color: red;")))
-                    ui_elements.append(ui.br(),)
-                    
-                ui_elements.append(
-                    ui.output_data_frame("render_results"),
-                )
-                ui_elements.append(ui.br(),)
+                    ui.output_data_frame("render_results")   
+                    )),
                 
                 if 'Base Editing' in filtered_guides_df['Editing Technology'].values:
                     ui_elements.append(
@@ -812,7 +841,7 @@ def server(input, output, session):
 
                 return ui.TagList(
                     ui_card(
-                        "Recommended Guide RNAs",
+                        "Results",
                         'results',
                         *ui_elements
                     )
