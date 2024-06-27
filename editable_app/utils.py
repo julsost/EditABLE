@@ -20,12 +20,10 @@ reverse_PAMs = None
 
 #helper function to find be guide rnas, pams, and 30 nt sequence
 def find_BE_guide_rnas(direction, seq, genomic_location):
-    print(f"find_BE_guide_rnas called with direction: {direction}, genomic_location: {genomic_location}")
     if direction == "forward":
         start_pams = genomic_location + (gRNA_size - edit_end) + 1
         end_pams = genomic_location + (gRNA_size - edit_start) + pam_length + 1
         possible_pams = seq[start_pams : end_pams]
-        print(f"possible_pams (forward): {possible_pams}")
         if len(re.findall(PAMs, str(possible_pams))) == 0:
             return "NO PAM"
         else:
@@ -41,14 +39,13 @@ def find_BE_guide_rnas(direction, seq, genomic_location):
                 end_idx = start_pams + match.start() + pam_length + 3
                 sequence = seq[start_idx:end_idx]
                 sequences.append(str(sequence))
-                print(f"Found guideRNA (forward): {gRNA}, PAM: {pam}, sequence: {sequence}")
+    
             return guideRNAs, pams, sequences
 
     elif direction == "reverse":
         start_pams = genomic_location - gRNA_size + edit_start - pam_length
         end_pams = genomic_location - gRNA_size + edit_end
         possible_pams = seq[start_pams : end_pams]
-        print(f"possible_pams (reverse): {possible_pams}")
         if len(re.findall(reverse_PAMs, str(possible_pams))) == 0:
             return "NO PAM"
         else:
@@ -66,11 +63,10 @@ def find_BE_guide_rnas(direction, seq, genomic_location):
                 end_idx = start_pams + match.start() + gRNA_size + pam_length + 4
                 sequence = seq[start_idx:end_idx].reverse_complement()
                 sequences.append(str(sequence))
-                print(f"Found guideRNA (reverse): {gRNA}, PAM: {pam}, sequence: {sequence}")
+            
             return guideRNAs, pams, sequences
     else:
         return "ERROR"
-
     
  
  # Helper function to find guide RNAs for transversion (C>G and G>C) mutations on forward/reverse strands    
@@ -324,24 +320,44 @@ def get_guide_RNAs(mutant_seq, edit_type, genomic_location):
     try:
         if edit_type == "A>G":
             result = find_BE_guide_rnas("forward", mutant_seq, genomic_location)
+            if result == "NO PAM":
+                return (("NO PAM", None, None), None)
+            return result, "forward"
         elif edit_type == "T>C":
             result = find_BE_guide_rnas("reverse", mutant_seq, genomic_location)
+      
+            if result == "NO PAM":
+                return (("NO PAM", None, None), None)
+            return result, "reverse"
         elif edit_type == "G>A":
             result = find_BE_guide_rnas("reverse", mutant_seq, genomic_location)
+           
+            if result == "NO PAM":
+                return (("NO PAM", None, None), None)
+            return result, "reverse"
         elif edit_type == "C>T":
             result = find_BE_guide_rnas("forward", mutant_seq, genomic_location)
+           
+            if result == "NO PAM":
+                return (("NO PAM", None, None), None)
+            return result, "forward"
         elif edit_type == "G>C":
             result = find_CGB_guide_rnas("forward", mutant_seq, genomic_location)
+           
+            if result == "NO PAM":
+                return (("NO PAM", None, None), None)
+            return result, "forward"
         elif edit_type == "C>G":
             result = find_CGB_guide_rnas("reverse", mutant_seq, genomic_location)
+           
+            if result == "NO PAM":
+                return (("NO PAM", None, None), None)
+            return result, "reverse"
         else:
             return (("NOT BASE EDITABLE", None, None), None)
-
-        if result == "NO PAM":
-            return (("NO PAM", None, None), None)
-        return result, "forward" if edit_type in ["A>G", "C>T"] else "reverse"
-
+    
     except Exception as e:
+        print(f"Exception in get_guide_RNAs: {e}")
         return (("ERROR", None, None), None)
 
 
@@ -503,8 +519,8 @@ def render_dataframe(df_dict):
     if 'Base Editing Guide Orientation' in df_render.columns:
         df_render = df_render.drop(columns=['Base Editing Guide Orientation'])
         
-    if 'Base Editing Guide Pam' in df_render.columns:
-        df_render = df_render.drop(columns=['Base Editing Guide Pam'])
+    # if 'Base Editing Guide Pam' in df_render.columns:
+    #     df_render = df_render.drop(columns=['Base Editing Guide Pam'])
  
     # Conditionally filter 'Base Editing Guide' if it exists
     if 'Base Editing Guide' in df_render.columns:
@@ -545,7 +561,7 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM):
                 df_dict['Editing Technology'].append("Base Editing")
                 df_dict['Base Editing Guide'].append(str(gRNA))
                 df_dict['Base Editing Guide Orientation'].append(orientation)
-                df_dict['Base Editing Guide Pam'].append(pam)
+                df_dict['PAM'].append(pam)
                 df_dict['Off Target Score (Click To Toggle)'].append(cfd_score)
                 df_dict['On Target Score (Click To Toggle)'].append(on_score)
                 df_dict['Bystander Edits?'].append(position_info)
@@ -589,7 +605,7 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM):
         if len(set(ref_sequence) - bases) == 0:
             substitution_position = identify_substitution_position(ref_sequence, edited_sequence)
             edit = f"{ref_sequence[substitution_position]}>{edited_sequence[substitution_position]}"
-            pam_sequence_list = [PAM, 'NRN', 'NYN']
+            pam_sequence_list = [PAM, 'NGN', 'NRN', 'NYN']
             df_dict = handle_base_editing(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original, substitution_position, pam_sequence_list)
         else:
             df_dict = handle_insertion_or_deletion(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original)
