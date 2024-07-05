@@ -188,3 +188,71 @@ def calculate_off_target_scores(wt_sequences: List[str], sg_sequences: List[str]
     return cfd_scores_df
 
 
+
+# Import necessary modules
+from rs3.seq import predict_seq
+
+def calcRs3Scores(seqs: List[str]) -> pd.DataFrame:
+    """ 
+    Calculate Doench RuleSet 3 (RS3) scores.
+    This function assumes the `predict_seq` function from the `rs3` package.
+    
+    Input: 
+    - seqs: List of 30mer sequences, including 4bp 5', 20bp guide, 3bp PAM, 3bp 3'
+
+    Output:
+    - scores: List of RS3 scores
+    """
+    newSeqs = []
+    for s in seqs:
+        assert len(s) == 30, "Each sequence must be exactly 30 bp long."
+        if "N" in s or "n" in s:
+            s = s.replace("N", "A").replace("n", "A")
+        newSeqs.append(s)
+    
+        scores = predict_seq(newSeqs, sequence_tracr='Hsu2013')
+        newScores = [int(100.0 * s) for s in scores]
+    
+    
+    return newScores
+
+rs3_scores = calcRs3Scores(["AGTGGAGGGAGGAGCAGGATAGTCCTTCCG", "AGTGGAGGGAGGAGCAGGATAGTCCTTCCG"])
+print("RS3 Scores:", rs3_scores)
+
+# # Example usage:
+# def calculate_rs3_scores(seqs):
+#     if __name__ == "__main__":
+#         sample_seqs = [
+#             "AGTGGAGGGAGGAGCAGGATAGTCCTTCCG", # Example 30mer sequence
+#             "CCACAACTACGCAGCGCCTCCCTCCACTCG"  # Another example
+#         ]
+        
+#         rs3_scores = calcRs3Scores(sample_seqs)
+#         print("RS3 Scores:", rs3_scores)
+
+
+def calculate_on_target_scores(seqs: List[str]) -> pd.DataFrame:
+    scores = []
+    for seq in seqs:
+        score = intercept
+        guide_seq = seq[4:24]
+        gc_count = guide_seq.count("G") + guide_seq.count("C")
+        if gc_count <= 10:
+            gc_weight = gcLow
+        else:
+            gc_weight = gcHigh
+        score += abs(10 - gc_count) * gc_weight
+
+        for pos, model_seq, weight in params:
+            sub_seq = seq[pos:pos + len(model_seq)]
+            if sub_seq == model_seq:
+                score += weight
+        Score = 1.0 / (1.0 + math.exp(-score))
+        scores.append((seq, Score))
+    
+    # Create a DataFrame for the results
+    on_target_scores_df = pd.DataFrame(scores, columns=['sequence', 'score'])
+    on_target_scores_df['score'] = on_target_scores_df['score'].round(3)*100
+    return on_target_scores_df
+
+
