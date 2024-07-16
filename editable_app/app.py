@@ -4,7 +4,7 @@ import pandas as pd
 import re
 from datetime import date, datetime
 from pathlib import Path
-from utils import get_guides, almost_reverse_complement, get_editor_info, process_guide_rnas, get_cloning_url, process_ng_rnas,  process_peg_rnas
+from utils import get_guides, almost_reverse_complement, get_editor_info, process_guide_rnas, get_cloning_url, process_ng_rnas,  process_peg_rnas, visualization_peg_rnas, visualization_ng_rnas
 from shiny import App, render, ui, reactive
 from shiny.types import ImgData
 
@@ -113,14 +113,14 @@ app_ui = ui.page_fluid(
         ui.br(),
         ui.help_text(
             ui.tags.b("GATAGCTCAGCTAGCCTAGTCAAACCTATC", style="font-family: Courier,courier"), 
-            ui.tags.b("T", style="color: red; font-family: Courier,courier"), 
+            ui.tags.b("G", style="color: red; font-family: Courier,courier"), 
             ui.tags.b("ACGTCGATCGATCGATCACACCGCCTAATC", style="font-family: Courier,courier"),
         ),
         ui.br(),
         ui.br(),
         ui.help_text(
             '''For changes that result in deletions, use a string of "-" characters in the desired sequence to denote the 
-            area of the deletion. For example, this would be a valid set of inputs for a deletion:'''
+       GATAGCTCAGCTAGCCTAGTCAAACCTATCGACGTCGATCGATCGATCACACCGCCTAATC     area of the deletion. For example, this would be a valid set of inputs for a deletion:'''
         ),
         ui.br(),
         ui.br(),
@@ -128,7 +128,7 @@ app_ui = ui.page_fluid(
         ui.br(),
         ui.help_text(
             ui.tags.b("GATAGCTCAGCTAGCCTAGTCAAACCTATC", style="font-family: Courier,courier"), 
-            ui.tags.b("ATT", style="color: red; font-family: Courier,courier"), 
+            ui.tags.b("GGG", style="color: red; font-family: Courier,courier"), 
             ui.tags.b("ACGTCGATCGATCGATCACACCGCCTAATC", style="font-family: Courier,courier"),
         ), 
         ui.br(),
@@ -215,7 +215,7 @@ app_ui = ui.page_fluid(
             ui.input_action_button("find_guides_csv", "Find Batch Guides", class_="btn-primary"),
         ),
         ui.div(
-            ui.input_action_button("advanced_settings_toggle", "Advanced User Settings", class_="btn-secondary me-2"),
+            ui.input_action_button("advanced_settings_toggle", "Advanced Base Editing Settings", class_="btn-secondary me-2"),
             ui.input_action_button("clear", "Clear Inputs", class_="btn-danger"),
             style="display: flex; gap: 5px; justify-content: left; margin-bottom: 30px;"
         ),
@@ -224,25 +224,25 @@ app_ui = ui.page_fluid(
 
     ui.output_ui("run_with_csv_input"),
     ui.output_ui("run_with_text_input"),
-    ui.br(),
-    ui.help_text(
-        '''For base editing, EditABLE finds guide RNAs where the editable base is in positions 4-9 starting from the 5' 
-           end of the guide RNA. Note that guide RNAs with base edits outside of this editing range may still work but 
-           tend to be significantly less efficient.'''
-    ),
-    ui.br(),
-    ui.br(),
-    ui.help_text(
-        '''Note that we use PrimeDesign (Hsu, J.Y., Grünewald, J., Szalay, R. et al. 
-        PrimeDesign software for rapid and simplified design of prime editing guide RNAs. 
-        Nat Commun 12, 1034 (2021)) for prime editing guide calcualtions. We run PrimeDesign 
-        with default parameters and take only the suggested guides. For more advanced usage 
-        please use the ''',
-        ui.tags.a('PrimeDesign portal', {'href' : 'https://primedesign.pinellolab.partners.org/', 'target' : '_blank'}),
-        ''' (https://primedesign.pinellolab.partners.org/) to design your Prime Editing guides.'''
-    ),
-    ui.br(),
-    ui.br(),
+    # ui.br(),
+    # ui.help_text(
+    #     '''For base editing, EditABLE finds guide RNAs where the editable base is in positions 4-9 starting from the 5' 
+    #        end of the guide RNA. Note that guide RNAs with base edits outside of this editing range may still work but 
+    #        tend to be significantly less efficient.'''
+    # ),
+    # ui.br(),
+    # ui.br(),
+    # ui.help_text(
+    #     '''Note that we use PrimeDesign (Hsu, J.Y., Grünewald, J., Szalay, R. et al. 
+    #     PrimeDesign software for rapid and simplified design of prime editing guide RNAs. 
+    #     Nat Commun 12, 1034 (2021)) for prime editing guide calcualtions. We run PrimeDesign 
+    #     with default parameters and take only the suggested guides. For more advanced usage 
+    #     please use the ''',
+    #     ui.tags.a('PrimeDesign portal', {'href' : 'https://primedesign.pinellolab.partners.org/', 'target' : '_blank'}),
+    #     ''' (https://primedesign.pinellolab.partners.org/) to design your Prime Editing guides.'''
+    # ),
+    # ui.br(),
+    # ui.br(),
     ui.help_text(
         '''For troubleshooting and suggested revisions, please contact the ''',
         ui.tags.a("Bhalla Lab", {'href' : 'https://med.stanford.edu/bhallalab.html', 'target' : '_blank'}),
@@ -264,21 +264,25 @@ def check_for_BE_or_PE_guides(guides_df):
 def check_availible_pam(PAM, selected_PAM):
     if PAM != selected_PAM:
         return f'No Guide RNAs available with {selected_PAM} PAM. See available {PAM} PAMs below:'
+    
+#checks if base editing window was changed for cgb edit
+def check_CGB_window(window, input_window):
+    if window != input_window:
+        return 'Alternative editing windows are not available for C>G and G>C edits. The default 4 to 9 window editing is shown'
 
-def check_ref_edited_pair(ref_sequence, edited_sequence):
-    print(f"Checking sequences: Original: {ref_sequence}, Edited: {edited_sequence}")  # Debugging line
+def check_ref_edited_pair(ref_sequence, edited_sequence, edit_start=4, edit_end=9):
     if len(ref_sequence) == 0 or len(edited_sequence) == 0:
-        print("Either the original sequence or the edited sequence is of zero length.")  # Debugging line
         return False, "Both the original sequence and the edited sequence must be of nonzero length."
     if len(ref_sequence) != len(edited_sequence):
-        print("The lengths of the original sequence and the edited sequence are not the same.")  # Debugging line
         return False, "The length of the original sequence and the edited sequence must be the same."
     if ref_sequence == edited_sequence:
-        print("The original sequence and the edited sequence are the same.")  # Debugging line
         return False, "The original sequence and the edited sequence are the same."
     if len(set(ref_sequence) - accepted_bases) != 0 or len(set(edited_sequence) - accepted_bases) != 0:
-        print("Invalid characters found in the sequences.")  # Debugging line
         return False, "You may only have the following characters in your sequences {A, C, G, T, a, c, g, t, -}."
+    if edit_start == edit_end:
+        return False, "The base editing window must span multiple nucleotides."
+    if edit_start > edit_end:
+        return False, "The base editing window start cannot be later than the base editing window end."
     if len(set(ref_sequence) - bases) == 0 and len(set(edited_sequence) - bases) == 0:
         substitution_position = None
         for i in range(len(ref_sequence)):
@@ -286,22 +290,17 @@ def check_ref_edited_pair(ref_sequence, edited_sequence):
             edited_base = edited_sequence[i]
             if ref_base != edited_base:
                 if substitution_position is not None:
-                    print("More than one SNV found.")  # Debugging line
                     return False, "The original sequence and the edited sequence contain more than one SNV. EditABLE currently only supports single SNVs, insertions, or deletions."
                 else:
                     substitution_position = i
         if substitution_position < 25:
-            print("Not enough base pairs before the desired edit.")  # Debugging line
             return False, f"There must be at least 25 base pairs of sequence before the desired edit. {substitution_position} base pairs were found before your edit."
         if len(ref_sequence) - 1 - substitution_position < 25:
-            print("Not enough base pairs after the desired edit.")  # Debugging line
             return False, f"There must be at least 25 base pairs of sequence after the desired edit. {len(ref_sequence) - 1 - substitution_position} base pairs were found after your edit."
     else:
         if '-' not in ref_sequence and '-' not in edited_sequence:
-            print("Lengths of sequences differ but no '-' found.")  # Debugging line
             return False, 'The lengths of the original sequence and the edited sequence are not the same but neither has a "-" in it.'
         if '-' in ref_sequence and '-' in edited_sequence:
-            print("'-' found in both sequences.")  # Debugging line
             return False, 'You cannot have a "-" in both the original and edited sequences.'
         elif '-' in ref_sequence:
             start_dash_position = None
@@ -311,15 +310,12 @@ def check_ref_edited_pair(ref_sequence, edited_sequence):
                     if start_dash_position is None:
                         start_dash_position = i
                     if current_dash_position is not None and i - current_dash_position != 1:
-                        print("Non-contiguous '-' in original sequence.")  # Debugging line
                         return False, 'The "-" characters are not contiguous, indicating that there are multiple insertions. EditABLE currently only supports single SNVs, insertions, or deletions.'
                     else:
                         current_dash_position = i
             if start_dash_position < 25:
-                print("Not enough base pairs before the desired edit in original sequence with '-' characters.")  # Debugging line
                 return False, f"There must be at least 25 base pairs of sequence before the desired edit. {start_dash_position} base pairs were found before your edit."
             if len(ref_sequence) - 1 - current_dash_position < 25:
-                print("Not enough base pairs after the desired edit in original sequence with '-' characters.")  # Debugging line
                 return False, f"There must be at least 25 base pairs of sequence after the desired edit. {len(ref_sequence) - 1 - current_dash_position} base pairs were found after your edit."
         else:
             start_dash_position = None
@@ -329,17 +325,13 @@ def check_ref_edited_pair(ref_sequence, edited_sequence):
                     if start_dash_position is None:
                         start_dash_position = i
                     if current_dash_position is not None and i - current_dash_position != 1:
-                        print("Non-contiguous '-' in edited sequence.")  # Debugging line
                         return False, 'The "-" characters are not contiguous, indicating that there are multiple deletions. EditABLE currently only supports single SNVs, insertions, or deletions.'
                     else:
                         current_dash_position = i
             if start_dash_position < 25:
-                print("Not enough base pairs before the desired edit in edited sequence with '-' characters.")  # Debugging line
                 return False, f"There must be at least 25 base pairs of sequence before the desired edit. {start_dash_position} base pairs were found before your edit."
             if len(ref_sequence) - 1 - current_dash_position < 25:
-                print("Not enough base pairs after the desired edit in edited sequence with '-' characters.")  # Debugging line
                 return False, f"There must be at least 25 base pairs of sequence after the desired edit. {len(ref_sequence) - 1 - current_dash_position} base pairs were found after your edit."
-    print("Sequences verified successfully.")  # Debugging line
     return True, "Inputs verified. Proceed to get guides."
 
 def create_prime_editing_plasmid_card(guides_df, editor_info, editor_url):
@@ -505,8 +497,8 @@ def generate_prime_editing_visualization(guides_df, ref_sequence_input, substitu
     pegRNA_oligo_extension_bottom = guides_df['PrimeDesign pegRNA Extension Oligo Bottom'].tolist()
     ngRNA_oligos = guides_df["PrimeDesign ngRNA Oligo Top"].tolist()
 
-    processed_pegRNA_oligos = process_peg_rnas(pegRNA_oligo_top, pegRNA_oligo_extension_bottom) if pegRNA_oligo_top and any(pegRNA_oligo_top) else None
-    processed_ngRNA_oligos = process_ng_rnas(ngRNA_oligos) if ngRNA_oligos and any(ngRNA_oligos) and ngRNA_oligos[0] != 'n/a' else None
+    processed_pegRNA_oligos = visualization_peg_rnas(pegRNA_oligo_top, pegRNA_oligo_extension_bottom) if pegRNA_oligo_top and any(pegRNA_oligo_top) else None
+    processed_ngRNA_oligos = visualization_ng_rnas(ngRNA_oligos) if ngRNA_oligos and any(ngRNA_oligos) and ngRNA_oligos[0] != 'n/a' else None
 
     prime_visualization_elements = []
     
@@ -544,8 +536,8 @@ def generate_prime_editing_visualization(guides_df, ref_sequence_input, substitu
             formatted_guide_rna = []
 
             constant_sequence = "GTTTTAGAGCTAGAAATAGCAAGTTAAAATAAGGCTAGTCCGTTATCAACTTGAAAAAGTGGCACCGAGTCGGTGC"
-            pegRNA_top = str([oligo[4:24] for oligo in pegRNA_oligo_top if oligo and oligo != 'n/a'][0]).upper()
-            pegRNA_extension_bottom = str([oligo[4:] for oligo in pegRNA_oligo_extension_bottom if oligo and oligo != 'n/a'][0]).upper()
+            pegRNA_top = str([oligo[4:24] for oligo in pegRNA_oligo_top if oligo and oligo != 'n/a'][0]).upper().replace('-', '')
+            pegRNA_extension_bottom = str([oligo[4:] for oligo in pegRNA_oligo_extension_bottom if oligo and oligo != 'n/a'][0]).upper().replace('-', '')
 
             for part in guide_rna_parts:
                 if part == constant_sequence:
@@ -591,7 +583,12 @@ def generate_prime_editing_visualization(guides_df, ref_sequence_input, substitu
 
     return prime_visualization_elements
 
-def generate_base_editing_visualization(guides_df, ref_sequence_input, substitution_position, PAM):
+def parse_base_editing_window(window_str):
+    start, end = map(int, window_str.split('-'))
+    return start - 1, end  # Adjust for 0-based index
+
+def generate_base_editing_visualization(guides_df, ref_sequence_input, substitution_position, PAM, window):
+    start, end = parse_base_editing_window(window)
     list_of_guides_to_display = []
     for index, row in guides_df.iterrows():
         if row['Editing Technology'] == 'Base Editing':
@@ -607,10 +604,10 @@ def generate_base_editing_visualization(guides_df, ref_sequence_input, substitut
                 all_guide_occurance_starts = [m.start() for m in re.finditer(guide, ref_sequence_input)]
 
             true_starting_positions = []
-            for start in all_guide_occurance_starts:
-                end = start + len(guide) - 1
-                if substitution_position >= start and substitution_position <= end:
-                    true_starting_positions.append(start)
+            for start_pos in all_guide_occurance_starts:
+                end_pos = start_pos + len(guide) - 1
+                if substitution_position >= start_pos and substitution_position <= end_pos:
+                    true_starting_positions.append(start_pos)
             assert len(true_starting_positions) == 1, ("Error! Guide cannot be aligned properly to input original sequence", guide, ref_sequence_almost_rc, orientation, all_guide_occurance_starts, substitution_position)
             guide_start = true_starting_positions[0]
 
@@ -621,7 +618,7 @@ def generate_base_editing_visualization(guides_df, ref_sequence_input, substitut
                 for i in range(len(guide)):
                     base_position = guide_start + len(guide) - 1 - i
                     base = ref_sequence_almost_rc[base_position]
-                    if i >= 3 and i < 9:  # Bases 4-9 (0-based index)
+                    if i >= start and i < end:  # Bases within the selected window
                         if base_position == substitution_position:  # Base to edit
                             reverse_guide_rna_with_formatting.append(ui.tags.b(base, style="text-decoration: underline; color: green; font-family: Courier,courier"))
                         elif base == base_to_edit:
@@ -651,7 +648,7 @@ def generate_base_editing_visualization(guides_df, ref_sequence_input, substitut
                 guide_rna_with_formatting = []
                 for i in range(len(guide)):
                     base = ref_sequence_input[guide_start + i]
-                    if i >= 3 and i < 9:  # Bases 4-9 (0-based index)
+                    if i >= start and i < end:  # Bases within the selected window
                         if guide_start + i == substitution_position:  # Base to edit
                             guide_rna_with_formatting.append(ui.tags.b(base, style="text-decoration: underline; color: green; font-family: Courier,courier"))
                         elif base == base_to_edit:
@@ -680,44 +677,60 @@ def generate_base_editing_visualization(guides_df, ref_sequence_input, substitut
             if index != guides_df.shape[0] - 1:
                 list_of_guides_to_display.append(ui.br())
                 list_of_guides_to_display.append(ui.br())
+            
     return list_of_guides_to_display
 
 def server(input, output, session):
     
+    # Define default values
+    DEFAULT_BASE_EDITING_WINDOW_START = 4
+    DEFAULT_BASE_EDITING_WINDOW_END = 9
+    DEFAULT_RS3_TOGGLE = False
+
+    
+    # Function to get base editing window values
+    def get_base_editing_window(mutation_type=None):
+        if mutation_type == "CGB":
+            return DEFAULT_BASE_EDITING_WINDOW_START, DEFAULT_BASE_EDITING_WINDOW_END  # Override for CGB
+        if input.advanced_settings_toggle() % 2 == 1:
+            return input.base_editing_window_start(), input.base_editing_window_end()
+        else:
+            return DEFAULT_BASE_EDITING_WINDOW_START, DEFAULT_BASE_EDITING_WINDOW_END
+        
+    def get_calculate_rs3():
+        if input.advanced_settings_toggle() % 2 == 1:
+            return input.rs3_toggle()
+        else:
+            return DEFAULT_RS3_TOGGLE
+        
     @output
     @render.image
     def prime_visualization_image():
         img: ImgData = {"src": str(Path(__file__).parent / "prime_editing_diagram.png"), "width": "600px"}
         return img
     
-    def input_check(ref_sequence_input, edited_sequence_input, df=None):
+    def input_check(ref_sequence_input, edited_sequence_input, df=None, edit_start=4, edit_end=9):
         nonlocal input_file
         if input_file and not (ref_sequence_input or edited_sequence_input):
             try:
                 df = pd.read_csv(input_file)
-                print(f"CSV Data:\n{df}")  # Debugging line
             except Exception as e:
-                print(f"Error reading CSV: {e}")
                 return False, "Input file is not a properly formed CSV file. Please input a proper CSV file."
 
             if len(df.columns) != 2 or df.columns.tolist() != ['Original Sequence', 'Desired Sequence']:
-                print("CSV columns are not as expected")
                 return False, 'Uploaded csv does not have the proper columns. Your csv must have two columns with names "Original Sequence" and "Desired Sequence"'
             
             counter = 1
             for index, row in df.iterrows():
                 ref_sequence = "".join(row['Original Sequence'].split()).upper()
                 edited_sequence = "".join(row['Desired Sequence'].split()).upper()
-                print(f"Row {counter}: Original Sequence: {ref_sequence}, Desired Sequence: {edited_sequence}")  # Debugging line
-                check, message = check_ref_edited_pair(ref_sequence, edited_sequence)
-                print(f"check: {check}, message: {message}")
+                check, message = check_ref_edited_pair(ref_sequence, edited_sequence, edit_start, edit_end)
                 if not check:
-                    print(f"Validation failed for row {counter}: {message}")  # Debugging line
                     return check, f"Error row {counter}: {message}"
                 counter += 1
             return True, "Input CSV verified. Proceed to get guides."
         elif ref_sequence_input and edited_sequence_input and not input_file:
-            check, message = check_ref_edited_pair("".join(ref_sequence_input.split()).upper(), "".join(edited_sequence_input.split()).upper())
+            check, message = check_ref_edited_pair("".join(ref_sequence_input.split()).upper(), "".join(edited_sequence_input.split()).upper(), edit_start, edit_end)
             return check, message
         elif ref_sequence_input and edited_sequence_input and input_file:
             return False, "Error: Fill in both text input fields or upload a CSV file but do not do both."
@@ -735,12 +748,9 @@ def server(input, output, session):
         nonlocal input_file
         file_infos = input.file1()
         if file_infos:
-            print(f"File Infos: {file_infos}")  # Debugging line
             input_file = file_infos[0]['datapath']
-            print(f"Input File: {input_file}")  # Debugging line
             return ui.div(ui.br(), ui.tags.b("File Successfully Uploaded", style="color: grey;", id='upload_status_message'))
         else:
-            print("No file selected")  # Debugging line
             return ui.div(ui.br(), ui.tags.b("Error: No file selected", style="color: red;", id='upload_status_message'))
 
 
@@ -753,6 +763,7 @@ def server(input, output, session):
             ui.update_select("pam_type", selected='NGN')
             ui.remove_ui(selector="div:has(> #results)")
             ui.remove_ui(selector="div:has(> #upload_status_message)")
+            ui.remove_ui(selector="#error_message")
             
             # Clear the file input UI
             ui.remove_ui(selector="div:has(> #file1)")
@@ -761,7 +772,6 @@ def server(input, output, session):
             @output
             @render.ui
             def ui_input_file():
-                print("Rendering file input")  # Debugging line
                 return ui.input_file("file1", 'Choose a CSV File of Sequences to Upload:', accept='.csv', multiple=False, width="100%")
 
             nonlocal input_file
@@ -771,7 +781,6 @@ def server(input, output, session):
     @output
     @render.ui
     def ui_input_file():
-        print("Rendering file input")  # Debugging line
         return ui.input_file(f"file1", 'Choose a CSV File of Sequences to Upload:', accept='.csv', multiple=False, width="100%")
     
     @reactive.Effect
@@ -781,7 +790,6 @@ def server(input, output, session):
         file_infos = input.file1()
         if file_infos:
             input_file = file_infos[0]['datapath']
-            print(f"File Uploaded: {input_file}")
             # Call the function to process the file
             process_uploaded_file(input_file)
 
@@ -789,19 +797,26 @@ def server(input, output, session):
         try:
             #read the file
             df = pd.read_csv(file_path)
-            print(f"CSV Data:\n{df}")
         except Exception as e:
             print(f"Error reading CSV: {e}")
 
-     
-    
     @output
     @render.ui
     def advanced_settings():
         if input.advanced_settings_toggle() % 2 == 1:
-            return ui.input_select("pam_type", "Select Desired Base Editing PAM", {"NGN": "NGN (Recommended)", "NGG": "NGG (Most Efficient)", "NGA" : "NGA", "NNGRRT" : "NNGRRT (SaCas9)", "NNNRRT" : "NNNRRT (SaCas9-KKH)", "NRN" : "NRN (SpRY)"})
+            return ui.TagList(
+                ui.input_select("pam_type", "Select Desired Base Editing PAM", {"NGN": "NGN (Recommended)", "NGG": "NGG (Most Efficient)", "NGA": "NGA", "NNGRRT": "NNGRRT (SaCas9)", "NNNRRT": "NNNRRT (SaCas9-KKH)", "NRN": "NRN (SpRY)"}),
+                ui.div(
+                    {"style": "display: flex; gap: 10px;"},
+                    ui.input_numeric("base_editing_window_start", "Base Editing Window Start", value=4, min=1),
+                    ui.input_numeric("base_editing_window_end", "Base Editing Window End", value=9, min=1)
+                ),
+                ui.input_checkbox("rs3_toggle", "Calculate RuleSet3 Scores?", value=True)
+            )
         else:
             return ui.div()
+
+
 
     @reactive.Effect()
     def handle_pam_selection():
@@ -810,6 +825,10 @@ def server(input, output, session):
         else:
             user_selected_pam.set("")
     
+    def display_error_message(message):
+        return ui.div(ui.tags.b(message, style="color: red;", id='error_message'))
+
+   
    #function to run if the user inputs a csv  
     @output
     @render.ui
@@ -817,15 +836,22 @@ def server(input, output, session):
     def run_with_csv_input():
         nonlocal input_file
         if not input_file:
-            return ui.div(ui.tags.b("No CSV file uploaded", style="color: red;"))
+            return display_error_message("No CSV file uploaded")
 
         df = pd.read_csv(input_file)
-        valid_inputs, message = input_check(None, None, df)
+        
+        # Get base editing window values
+        base_editing_window_start, base_editing_window_end = get_base_editing_window()
+        base_editing_window = f"{base_editing_window_start}-{base_editing_window_end}"
+        
+        valid_inputs, message = input_check(None, None, df, base_editing_window_start, base_editing_window_end )
         if not valid_inputs:
-            return ui.div(ui.tags.b(message, style="color: red;"))
+            return display_error_message(message)
 
         selected_PAM = user_selected_pam.get() or "NGG"  # Default to NGG if no PAM is selected
         PAM = selected_PAM
+        
+        calculate_rs3 = get_calculate_rs3()
 
         @output
         @render.data_frame
@@ -837,7 +863,7 @@ def server(input, output, session):
                 filters=False,
                 summary=True,
             )
-        
+
         @session.download(filename=lambda: f"guides-{date.today().isoformat()}-{datetime.now().strftime('%H-%M-%S')}.csv")
         async def download_Results():
             nonlocal guides_df
@@ -853,7 +879,7 @@ def server(input, output, session):
                 p.set(counter, message="Finding guides")
                 ref_sequence_input = "".join(row['Original Sequence'].split()).upper()
                 edited_sequence_input = "".join(row['Desired Sequence'].split()).upper()
-                to_display_guides_df, guides_df = get_guides(ref_sequence_input, edited_sequence_input, PAM)
+                to_display_guides_df, guides_df = get_guides(ref_sequence_input, edited_sequence_input, selected_PAM, base_editing_window_start, base_editing_window_end, calculate_rs3=calculate_rs3)
                 index_column = [str(counter)] * to_display_guides_df.shape[0]
                 to_display_guides_df.insert(loc=0, column='Input CSV Row Number', value=index_column)
                 dfs_to_merge_download.append(guides_df)
@@ -876,8 +902,9 @@ def server(input, output, session):
 
         ui_elements = [
             ui.help_text(
-                '''Note: for base editing, there can be more than one guide RNA for a single desired edit, but for prime editing, we will only show the recommended PrimeDesign guide RNA. The off-target score is calculated using the CFD score algorithm (Doench et al. 2014) where a higher score indicates a lower likelihood of off-target activity (higher is better). The on-target score is calculated using the RuleSet1 algorithm where a higher score indicates greater efficiency of guide RNA binding to the genomic target sequence (higher is better). Both algorithms are from ''',
-                ui.tags.a('Doench et al. 2014 Nat Biotechnol.', {'href': 'https://pubmed.ncbi.nlm.nih.gov/25184501/', 'target': '_blank'})
+                '''Note: for base editing, we will show multiple guide RNAs, but for prime editing, we will only show the recommended PrimeDesign guide RNA. The off-target score is calculated using the CFD score algorithm (Doench et al. 2014) where a higher score indicates a lower likelihood of off-target activity. The on-target score is calculated using the RuleSet1 algorithm where a higher score indicates greater efficiency of guide RNA binding to the genomic target sequence. Both algorithms are from ''',
+                ui.tags.a('Doench et al. 2014 Nat Biotechnol.', {'href': 'https://pubmed.ncbi.nlm.nih.gov/25184501/', 'target': '_blank'}),
+                ui.tags.b(" A higher score is better for both algorithms.", style="text-decoration: bold")
             ),
             ui.br(),
             ui.br(),
@@ -890,13 +917,12 @@ def server(input, output, session):
 
         return ui.TagList(
             ui_card(
-                "Results",
+                "Batch Sequence Results",
                 'results',
                 *ui_elements
             )
         )
-        
-    
+
    #function to run if the user inputs a text sequence 
     @output
     @render.ui
@@ -904,23 +930,29 @@ def server(input, output, session):
     def run_with_text_input():
         ref_sequence_input = "".join(input.ref_sequence_input().split()).upper()
         edited_sequence_input = "".join(input.edited_sequence_input().split()).upper()
-        print(f'ref_seq: {ref_sequence_input}, edited_seq: {edited_sequence_input}')
+        
+        # Get base editing window values
+        base_editing_window_start, base_editing_window_end = get_base_editing_window()
+        input_window = f"{base_editing_window_start}-{base_editing_window_end}"
+        #print(f'input_window: {input_window}')
         
         selected_PAM = user_selected_pam.get() or "NGG"  # Default to NGG if no PAM is selected
         PAM = selected_PAM
-
-        valid_inputs, message = check_ref_edited_pair(ref_sequence_input, edited_sequence_input)
+        
+        calculate_rs3 = get_calculate_rs3()
+        
+        valid_inputs, message = check_ref_edited_pair(ref_sequence_input, edited_sequence_input, base_editing_window_start, base_editing_window_end)
         if not valid_inputs:
-            return ui.div(ui.tags.b(message, style="color: red;"))
+            return display_error_message(message)
 
-        to_display_guides_df, guides_df = get_guides(ref_sequence_input, edited_sequence_input, PAM)
+        to_display_guides_df, guides_df = get_guides(ref_sequence_input, edited_sequence_input, selected_PAM, base_editing_window_start, base_editing_window_end, calculate_rs3=calculate_rs3)
         to_display_guides_df = to_display_guides_df.drop(columns=['Original Sequence', 'Desired Sequence'])
         to_display_guides_df.insert(loc=0, column='Guide', value=[f"Guide {i + 1}" for i in range(to_display_guides_df.shape[0])])
 
         base_editing_guides_df = guides_df[guides_df['Editing Technology'] == 'Base Editing']
         prime_editing_guides_df = guides_df[guides_df['Editing Technology'] == 'Prime Editing']
         filtered_guides_df = to_display_guides_df[to_display_guides_df['Editing Technology'].isin(['Base Editing', 'Prime Editing'])]
-
+        
         # Tells users to try other PAMs if default isn't available
         if not base_editing_guides_df.empty:
             pams = guides_df["PAM"].tolist()
@@ -929,8 +961,13 @@ def server(input, output, session):
             PAM = selected_PAM
 
         # Define variables to find enzyme protein on Addgene in suggested Addgene plasmid section
-        editor_name, editor_id, editor_url = get_editor_info(ref_sequence_input, edited_sequence_input, PAM)
+        editor_information, mutation_type = get_editor_info(ref_sequence_input, edited_sequence_input, PAM)
+        editor_name, editor_id, editor_url = editor_information
         editor_info = f"{editor_name} (Addgene: {editor_id})"
+        
+        base_editing_window_start, base_editing_window_end = get_base_editing_window(mutation_type) #in case its a cgb edit 
+        base_editing_window = f"{base_editing_window_start}-{base_editing_window_end}"
+        #print(f'actual window: {base_editing_window}')
 
         # Define variables to find guide RNA cloning plasmid on Addgene in suggested Addgene plasmid section
         cloning_name, cloning_id, cloning_url = get_cloning_url(PAM)
@@ -940,8 +977,7 @@ def server(input, output, session):
         message = check_for_BE_or_PE_guides(guides_df)
         if message:
             return ui.div(ui.tags.b(f"{message}", style="color: red;"), ui.tags.a("https://www.nature.com/articles/nprot.2013.143", href="https://www.nature.com/articles/nprot.2013.143", target="_blank", style="color: red;"))
-
-        
+       
         @output
         @render.data_frame
         def render_results():
@@ -957,7 +993,7 @@ def server(input, output, session):
         async def download_results():
             nonlocal guides_df
             yield guides_df.to_csv()
-    
+
         substitution_position = None
         for i in range(len(ref_sequence_input)):
             ref_base = ref_sequence_input[i]
@@ -970,26 +1006,48 @@ def server(input, output, session):
             ref_sequence_input = ref_sequence_input[substitution_position - 25:substitution_position + 25 + 1]
             substitution_position = 25
 
-        list_of_guides_to_display = generate_base_editing_visualization(guides_df, ref_sequence_input, substitution_position, PAM)
+        list_of_guides_to_display = generate_base_editing_visualization(guides_df, ref_sequence_input, substitution_position, PAM, base_editing_window)
 
         ui_elements = []
+        if get_base_editing_window():
+            message = check_CGB_window(base_editing_window, input_window)
+            if message:
+                ui_elements.append(ui.help_text(ui.tags.b(f"{message}", style="color: red;")))
+                ui_elements.append(ui.br(),)
         if user_selected_pam.get():
             message = check_availible_pam(PAM, selected_PAM)
             if message:
                 ui_elements.append(ui.help_text(ui.tags.b(f"{message}", style="color: red;")))
                 ui_elements.append(ui.br(),)
+                
+        # Determine the guide title and help text based on the editing technology
+        if "Base Editing" in filtered_guides_df['Editing Technology'].values:
+            guide_title = "Recommended Base Editing Guide RNAs"
+            help_text = ui.help_text(
+                '''Note: for base editing, we will show multiple guide RNAs, but for prime editing, we will only show the recommended PrimeDesign guide RNA. The off-target score is calculated using the CFD score algorithm (Doench et al. 2014) where a higher score indicates a lower likelihood of off-target activity. The on-target score is calculated using the RuleSet1 algorithm where a higher score indicates greater efficiency of guide RNA binding to the genomic target sequence. Both algorithms are from ''',
+                ui.tags.a('Doench et al. 2014 Nat Biotechnol.', {'href': 'https://pubmed.ncbi.nlm.nih.gov/25184501/', 'target': '_blank'}),
+                ui.tags.b(" A higher score is better for both algorithms.", style="text-decoration: bold")
+            )
+        else:
+            guide_title = "Recommended Prime Editing Guide RNAs"
+            help_text = ui.help_text(
+                '''Note: We use the PrimeDesign algorithm with default parameters (including NGG pam) to identify the single most optimal prime editing guide RNA. For more advanced usage please visit the ''',
+                ui.tags.a('PrimeDesign portal', {'href': 'https://primedesign.pinellolab.partners.org', 'target': '_blank'}),
+                ''' or see the original publication ''',
+                ui.tags.a('(Hsu et al. 2021 Nat Commun)', {'href': 'https://pubmed.ncbi.nlm.nih.gov/33589617/', 'target': '_blank'}),
+                '''.'''
+            )
 
+        # Append the card to the UI elements
         ui_elements.append(ui_card(
-            "Recommended Guide RNAs",
+            guide_title,
             'guides_df',
-            ui.help_text(
-                '''Note: for base editing, there can be more than one guide RNA for a single desired edit, but for prime editing, we will only show the recommended PrimeDesign guide RNA. The off-target score is calculated using the CFD score algorithm (Doench et al. 2014) where a higher score indicates a lower likelihood of off-target activity (higher is better). The on-target score is calculated using the RuleSet1 algorithm where a higher score indicates greater efficiency of guide RNA binding to the genomic target sequence (higher is better). Both algorithms are from ''',
-                ui.tags.a('Doench et al. 2014 Nat Biotechnol.', {'href': 'https://pubmed.ncbi.nlm.nih.gov/25184501/', 'target': '_blank'})
-            ),
+            help_text,
             ui.br(),
             ui.br(),
             ui.output_data_frame("render_results")
         ))
+
 
         if 'Base Editing' in filtered_guides_df['Editing Technology'].values:
             ui_elements.append(
@@ -1001,9 +1059,11 @@ def server(input, output, session):
                     ui.help_text(f"Recommended Base Editing Plasmid: {editor_info}"),
                     ui.br(),
                     ui.br(),
-                    ui.tags.a("View Guide RNA Plasmid", href=cloning_url, target="_blank", class_="btn btn-primary"),
-                    ui.help_text(" "),
-                    ui.tags.a("View Base Editing Plasmid", href=editor_url, target="_blank", class_="btn btn-primary"),
+                    ui.div(
+                        ui.tags.a("View Guide RNA Plasmid", href=cloning_url, target="_blank", class_="btn btn-primary me-2"),
+                        ui.tags.a("View Base Editing Plasmid", href=editor_url, target="_blank", class_="btn btn-primary"),
+                        style="display: flex; gap: 5px; justify-content: left; margin-bottom: 30px;"
+                    ),
                 )
             )
             ui_elements.append(
@@ -1019,9 +1079,9 @@ def server(input, output, session):
                         ui.tags.b("violet", style="color: violet"),
                         " characters represent other nucleotides in the guide, ",
                         ui.tags.b("underlined", style="text-decoration: underline"),
-                        " characters represent a span for potential bystander edits, and ",
+                        " characters represent characters the base editing window, and ",
                         ui.tags.b("red", style= "color: red"),
-                        " characters represent the potential bystander edits, themselves. Grey characters represent nucleotides not spanned by the guide. Only 25 bp of sequence upstream and downstream of the desired edit is shown. NOTE: when toggling the order of the guides, the guide number above corresponds to the guide number within the visualization."
+                        " characters represent any bystander edits within the editing window. Grey characters represent nucleotides not spanned by the guide.  NOTE: Only 25 bp of sequence upstream and downstream of the desired edit is shown. Also, toggling the order of the guides, the guide number above corresponds to the guide number within the visualization."
                     ),
                     ui.br(),
                     ui.br(),
@@ -1043,17 +1103,15 @@ def server(input, output, session):
             
             ui_elements.append(generate_prime_protocals_section(prime_editing_guides_df))
 
-
         ui_elements.append(ui.download_button("download_results", "Download Results as CSV File"))
 
         return ui.TagList(
             ui_card(
-                "Results",
+                "Single Sequence Results",
                 'results',
                 *ui_elements
             )
         )
-    
 
     @output
     @render.image
