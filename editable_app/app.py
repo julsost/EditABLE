@@ -356,7 +356,7 @@ def create_prime_editing_plasmid_card(guides_df, editor_info, editor_url):
 
     
     # Add the recommended prime editing plasmid information
-    prime_card_elements.append(ui.help_text(f"Recommended Prime Editing Plasmid: {editor_info}"))
+    prime_card_elements.append(ui.help_text(f"Recommended Prime Editor Plasmid: {editor_info}"))
     prime_card_elements.append(ui.br())
     prime_card_elements.append(ui.br())
     
@@ -366,7 +366,7 @@ def create_prime_editing_plasmid_card(guides_df, editor_info, editor_url):
             {"class": "d-flex"},
             ui.tags.a("View pegRNA Plasmid", href="https://www.addgene.org/174038/", target="_blank", class_="btn btn-primary me-2") if processed_pegRNA_oligos else None,
             ui.tags.a("View ngRNA Plasmid", href="https://www.addgene.org/65777/", target="_blank", class_="btn btn-primary me-2") if processed_ngRNA_oligos else None,
-            ui.tags.a("View Prime Editing Plasmid", href=editor_url, target="_blank", class_="btn btn-primary"),
+            ui.tags.a("View Prime Editor Plasmid", href=editor_url, target="_blank", class_="btn btn-primary"),
         )
     )
     
@@ -1024,14 +1024,14 @@ def server(input, output, session):
         if "Base Editing" in filtered_guides_df['Editing Technology'].values:
             guide_title = "Recommended Base Editing Guide RNAs"
             help_text = ui.help_text(
-                '''Note: for base editing, we will show multiple guide RNAs, but for prime editing, we will only show the recommended PrimeDesign guide RNA. The off-target score is calculated using the CFD score algorithm (Doench et al. 2014) where a higher score indicates a lower likelihood of off-target activity. The on-target score is calculated using the RuleSet1 algorithm where a higher score indicates greater efficiency of guide RNA binding to the genomic target sequence. Both algorithms are from ''',
+                '''Note: Multiple guide RNAs are shown with the ability to toggle based on optimal on-target and off-target scoring. The off-target score is calculated using the CFD score algorithm where a higher score indicates a lower likelihood of off-target activity. The on-target score is calculated using the default RuleSet1 algorithm where a higher score indicates greater efficiency of guide RNA binding to the genomic target sequence. For additional information on these algorithms, please see the original publication ''',
                 ui.tags.a('Doench et al. 2014 Nat Biotechnol.', {'href': 'https://pubmed.ncbi.nlm.nih.gov/25184501/', 'target': '_blank'}),
                 ui.tags.b(" A higher score is better for both algorithms.", style="text-decoration: bold")
             )
         else:
             guide_title = "Recommended Prime Editing Guide RNAs"
             help_text = ui.help_text(
-                '''Note: We use the PrimeDesign algorithm with default parameters (including NGG pam) to identify the single most optimal prime editing guide RNA. For more advanced usage please visit the ''',
+                '''Note: We use the PrimeDesign algorithm with default parameters (including NGG PAM) to identify the single most optimal prime editing guide RNA. For more advanced usage please visit the ''',
                 ui.tags.a('PrimeDesign portal', {'href': 'https://primedesign.pinellolab.partners.org', 'target': '_blank'}),
                 ''' or see the original publication ''',
                 ui.tags.a('(Hsu et al. 2021 Nat Commun)', {'href': 'https://pubmed.ncbi.nlm.nih.gov/33589617/', 'target': '_blank'}),
@@ -1056,12 +1056,12 @@ def server(input, output, session):
                     "recommended_editor",
                     ui.help_text(f"Recommended Guide RNA Plasmid: {plasmid_info}"),
                     ui.br(),
-                    ui.help_text(f"Recommended Base Editing Plasmid: {editor_info}"),
+                    ui.help_text(f"Recommended Base Editor Plasmid: {editor_info}"),
                     ui.br(),
                     ui.br(),
                     ui.div(
                         ui.tags.a("View Guide RNA Plasmid", href=cloning_url, target="_blank", class_="btn btn-primary me-2"),
-                        ui.tags.a("View Base Editing Plasmid", href=editor_url, target="_blank", class_="btn btn-primary"),
+                        ui.tags.a("View Base Editor Plasmid", href=editor_url, target="_blank", class_="btn btn-primary"),
                         style="display: flex; gap: 5px; justify-content: left; margin-bottom: 30px;"
                     ),
                 )
