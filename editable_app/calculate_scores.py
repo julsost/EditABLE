@@ -145,10 +145,6 @@ def calculate_on_target_scores(seqs: List[str]) -> pd.DataFrame:
     on_target_scores_df['score'] = on_target_scores_df['score'].round(3)*100
     return on_target_scores_df
 
-
-
-
-
 #Everything below is in relation to off target scoring
 def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description='Calculates CFD score')
@@ -187,8 +183,6 @@ def calculate_off_target_scores(wt_sequences: List[str], sg_sequences: List[str]
     
     return cfd_scores_df
 
-
-
 # Import necessary modules
 from rs3.seq import predict_seq
 
@@ -211,13 +205,13 @@ def calcRs3Scores(seqs: List[str]) -> pd.DataFrame:
         newSeqs.append(s)
     
         scores = predict_seq(newSeqs, sequence_tracr='Hsu2013')
-        newScores = [int(100.0 * s) for s in scores]
+        newScores = [int(100.0 * s)/2 for s in scores]
     
-    
+      
     return newScores
 
-rs3_scores = calcRs3Scores(["AGTGGAGGGAGGAGCAGGATAGTCCTTCCG", "AGTGGAGGGAGGAGCAGGATAGTCCTTCCG"])
-print("RS3 Scores:", rs3_scores)
+# rs3_scores = calcRs3Scores(["AGTGGAGGGAGGAGCAGGATAGTCCTTCCG", "AGTGGAGGGAGGAGCAGGATAGTCCTTCCG"])
+# print("RS3 Scores:", rs3_scores)
 
 # # Example usage:
 # def calculate_rs3_scores(seqs):
@@ -255,4 +249,58 @@ def calculate_on_target_scores(seqs: List[str]) -> pd.DataFrame:
     on_target_scores_df['score'] = on_target_scores_df['score'].round(3)*100
     return on_target_scores_df
 
+
+# # Import the necessary modules from criscas package
+# from criscas import BE_perbase
+
+# # Load the pre-trained model
+# model = BE_perbase.Model()
+
+# # Define the input sequence and target base editor
+# input_seq = 'TCTGCTCAGCTCATGCCGAT'
+# target_base_editor = 'CBE'
+
+# # Predict the per-base editing efficiencies
+# predictions = model.predict(input_seq, target_base_editor)
+
+# # Print the predictions
+# for pos, pred in predictions:
+#     print(f'Position {pos}: {pred}')
+    
+
+# import os
+# import pandas as pd
+# import torch
+# from criscas.utilities import get_device
+# from criscas.predict_model import BEDICT_CriscasModel
+
+# # Function to calculate efficiency score
+# def calculate_efficiency_score(base_editor: str, seq: str) -> float:
+#     # Wrap the sequence in a DataFrame
+#     seq_df = pd.DataFrame({'ID': ['sample_seq'], 'seq': [seq]})
+    
+#     # Instantiate the device (GPU or CPU)
+#     device = get_device(True, 0)
+    
+#     # Instantiate the BEDICT_CriscasModel with the base editor and device
+#     bedict = BEDICT_CriscasModel(base_editor, device)
+
+#     # Generate predictions
+#     pred_w_attn_runs_df, proc_df = bedict.predict_from_dataframe(seq_df)
+    
+#     # Select prediction (using mean)
+#     pred_option = 'mean'
+#     pred_w_attn_df = bedict.select_prediction(pred_w_attn_runs_df, pred_option)
+    
+#     # Extract and return the score for the input sequence
+#     score = pred_w_attn_df.loc[pred_w_attn_df['id'] == 'sample_seq', 'prob_score_class1'].mean()
+#     return score
+     
+
+# if __name__ == "__main__":
+#     base_editor = "ABEmax"
+#     seq = "GTTTCAGGCCACACTTCGAG"
+    
+#     score = calculate_efficiency_score(base_editor, seq)
+#     print(f"The efficiency score for the sequence is: {score}")
 
