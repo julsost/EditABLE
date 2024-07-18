@@ -397,7 +397,7 @@ def generate_prime_protocals_section(guides_df):
         ui.tags.span("2. Digest geneBlock using "),
         ui.tags.a("BsaI enzyme", href="https://www.neb.com/en-us/products/r3733-bsai-hf-v2", target="_blank"),
         ui.tags.span(" (37oC for 1 hr, 80 oC for 20 min) and purify using gel extraction kit "),
-        ui.tags.a("(Zymo: D4007).", href="https://www.neb.com/en-us/products/r3733-bsai-hf-v2", target="_blank"),
+        ui.tags.a("(Zymo: D4007).", href="https://www.zymoresearch.com/collections/zymoclean-gel-dna-recovery-kits/products/zymoclean-gel-dna-recovery-kit", target="_blank"),
     ),
 ])
     prime_section.extend([
