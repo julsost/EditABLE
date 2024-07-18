@@ -395,7 +395,9 @@ def generate_prime_protocals_section(guides_df):
     prime_section.extend([
     ui.help_text(
         ui.tags.span("2. Digest geneBlock using "),
-        ui.tags.a("BsaI enzyme.", href="https://www.neb.com/en-us/products/r3733-bsai-hf-v2", target="_blank"),
+        ui.tags.a("BsaI enzyme", href="https://www.neb.com/en-us/products/r3733-bsai-hf-v2", target="_blank"),
+        ui.tags.span(" (37oC for 1 hr, 80 oC for 20 min) and purify using gel extraction kit "),
+        ui.tags.a("(Zymo: D4007).", href="https://www.neb.com/en-us/products/r3733-bsai-hf-v2", target="_blank"),
     ),
 ])
     prime_section.extend([
@@ -490,10 +492,10 @@ def generate_prime_editing_visualization(guides_df, ref_sequence_input, substitu
     # Add the introductory text with colored formatting 
     intro_text = ui.help_text(
         "This section provides a visualization of the recommended prime editing guide RNA design. ",
-        "The ", ui.tags.b("red", style="color: red;"), "characters represent the pegRNA. ",
-        "The ", ui.tags.b("blue", style="color: blue;"), " characters represent the SpCas9 scaffold. ",
-        "The ", ui.tags.b("orange", style="color: orange;"), " characters represent the pegRNA extension sequence, ",
-        "and, the ", ui.tags.b("violet", style="color: violet;"), " characters represent the nicking guide RNA (ngRNA, if applicable). Note that the ngRNA is only applicable to certain edits. ",
+        "The ", ui.tags.b("red", style="color: red;"), " characters represent the pegRNA spacer, ",
+        "the ", ui.tags.b("blue", style="color: blue;"), " characters represent the SpCas9 scaffold, ",
+        "the ", ui.tags.b("orange", style="color: orange;"), " characters represent the pegRNA extension sequence, ",
+        "and the ", ui.tags.b("violet", style="color: violet;"), " characters represent the nicking guide RNA (ngRNA, if applicable). Note that the ngRNA is only applicable to certain edits. ",
     )
     
     prime_visualization_elements.append(intro_text)
@@ -504,15 +506,12 @@ def generate_prime_editing_visualization(guides_df, ref_sequence_input, substitu
     prime_visualization_elements.append(
         ui.div(
             ui.output_image("prime_visualization_image"),
-            {"style": "text-align: center;"}
+            {"style": "text-align: left;"}
         )
     )
+
     prime_visualization_elements.append(ui.br())
-    prime_visualization_elements.append(ui.br())
-    prime_visualization_elements.append(ui.br())
-    prime_visualization_elements.append(ui.br())
-    prime_visualization_elements.append(ui.br())
-    prime_visualization_elements.append(ui.br())
+    
     if processed_pegRNA_oligos:
         for guide_index, guide_rna in enumerate(processed_pegRNA_oligos):
             guide_rna_parts = guide_rna.split()
@@ -562,7 +561,7 @@ def generate_prime_editing_visualization(guides_df, ref_sequence_input, substitu
             prime_visualization_elements.append(ui.br())
             prime_visualization_elements.append(ui.help_text(*complete_ng_rna_text))
             prime_visualization_elements.append(ui.br())
-            prime_visualization_elements.append(ui.br())
+            #prime_visualization_elements.append(ui.br())
 
     return prime_visualization_elements
 
@@ -688,7 +687,7 @@ def server(input, output, session):
     @output
     @render.image
     def prime_visualization_image():
-        img: ImgData = {"src": str(Path(__file__).parent / "prime_editing_diagram.png"), "width": "600px"}
+        img: ImgData = {"src": str(Path(__file__).parent / "prime_editing_diagram.png"), "width": "500px"}
         return img
     
     def input_check(ref_sequence_input, edited_sequence_input, df=None, edit_start=4, edit_end=9):
