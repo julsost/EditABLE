@@ -224,25 +224,6 @@ app_ui = ui.page_fluid(
 
     ui.output_ui("run_with_csv_input"),
     ui.output_ui("run_with_text_input"),
-    # ui.br(),
-    # ui.help_text(
-    #     '''For base editing, EditABLE finds guide RNAs where the editable base is in positions 4-9 starting from the 5' 
-    #        end of the guide RNA. Note that guide RNAs with base edits outside of this editing range may still work but 
-    #        tend to be significantly less efficient.'''
-    # ),
-    # ui.br(),
-    # ui.br(),
-    # ui.help_text(
-    #     '''Note that we use PrimeDesign (Hsu, J.Y., Grünewald, J., Szalay, R. et al. 
-    #     PrimeDesign software for rapid and simplified design of prime editing guide RNAs. 
-    #     Nat Commun 12, 1034 (2021)) for prime editing guide calcualtions. We run PrimeDesign 
-    #     with default parameters and take only the suggested guides. For more advanced usage 
-    #     please use the ''',
-    #     ui.tags.a('PrimeDesign portal', {'href' : 'https://primedesign.pinellolab.partners.org/', 'target' : '_blank'}),
-    #     ''' (https://primedesign.pinellolab.partners.org/) to design your Prime Editing guides.'''
-    # ),
-    # ui.br(),
-    # ui.br(),
     ui.help_text(
         '''For troubleshooting and suggested revisions, please contact the ''',
         ui.tags.a("Bhalla Lab", {'href' : 'https://med.stanford.edu/bhallalab.html', 'target' : '_blank'}),
@@ -283,6 +264,10 @@ def check_ref_edited_pair(ref_sequence, edited_sequence, edit_start=4, edit_end=
         return False, "The base editing window must span multiple nucleotides."
     if edit_start > edit_end:
         return False, "The base editing window start cannot be later than the base editing window end."
+    if edit_end > 20:
+        return False, "The base editing window end can not be greater than 20."
+    if edit_start < 1:
+        return False, "The base editing window start can not be less than 1."
     if len(set(ref_sequence) - bases) == 0 and len(set(edited_sequence) - bases) == 0:
         substitution_position = None
         for i in range(len(ref_sequence)):
@@ -335,9 +320,9 @@ def check_ref_edited_pair(ref_sequence, edited_sequence, edit_start=4, edit_end=
     return True, "Inputs verified. Proceed to get guides."
 
 def create_prime_editing_plasmid_card(guides_df, editor_info, editor_url):
-    pegRNA_oligo_top = guides_df["PrimeDesign pegRNA Spacer Oligo Top"].tolist()
-    pegRNA_oligo_extension_bottom = guides_df['PrimeDesign pegRNA Extension Oligo Bottom'].tolist()
-    ngRNA_oligos = guides_df["PrimeDesign ngRNA Oligo Top"].tolist()
+    pegRNA_oligo_top = guides_df["pegRNA Spacer Oligo Top"].tolist()
+    pegRNA_oligo_extension_bottom = guides_df['pegRNA Extension Oligo Bottom'].tolist()
+    ngRNA_oligos = guides_df["ngRNA Oligo Top"].tolist()
     
     processed_pegRNA_oligos = process_peg_rnas(pegRNA_oligo_top, pegRNA_oligo_extension_bottom ) if pegRNA_oligo_top and any(pegRNA_oligo_top) else None
     processed_ngRNA_oligos = process_ng_rnas(ngRNA_oligos) if ngRNA_oligos and any(ngRNA_oligos) and ngRNA_oligos[0] != 'n/a' else None
@@ -379,9 +364,9 @@ def create_prime_editing_plasmid_card(guides_df, editor_info, editor_url):
 
 def generate_prime_protocals_section(guides_df):
     # Extract the oligos from the DataFrame
-    pegRNA_oligo_top = guides_df["PrimeDesign pegRNA Spacer Oligo Top"].tolist()
-    pegRNA_oligo_extension_bottom = guides_df['PrimeDesign pegRNA Extension Oligo Bottom'].tolist()
-    ngRNA_oligos = guides_df["PrimeDesign ngRNA Oligo Top"].tolist()
+    pegRNA_oligo_top = guides_df["pegRNA Spacer Oligo Top"].tolist()
+    pegRNA_oligo_extension_bottom = guides_df['pegRNA Extension Oligo Bottom'].tolist()
+    ngRNA_oligos = guides_df["ngRNA Oligo Top"].tolist()
 
     # Initialize the prime section UI elements
     prime_section = [
@@ -448,7 +433,7 @@ def generate_prime_protocals_section(guides_df):
                 prime_section.extend([
                     ui.help_text(
                         ui.tags.span("2. Follow Cloning Protocol here for "),
-                        ui.tags.a("ngRNA plasmid.", href="https://media.addgene.org/cms/filer_public/6d/d8/6dd83407-3b07-47db-8adb-4fada30bde8a/zhang-lab-general-cloning-protocol-target-sequencing_1.pdf", target="_blank"),
+                        ui.tags.a("ngRNA plasmid.", href="https://drive.google.com/file/d/1RBkiXhl7CCKxHuDNkaogvjkEykxkH4ws/view?usp=sharing", target="_blank"),
                     ),
                 ])
 
@@ -486,16 +471,16 @@ def generate_experimental_validation_section(guides_df, pam_type):
     validation_section.extend([
         ui.help_text(
             ui.tags.span("2. Follow Cloning Protocol "),
-            ui.tags.a("here.", href="https://media.addgene.org/cms/filer_public/6d/d8/6dd83407-3b07-47db-8adb-4fada30bde8a/zhang-lab-general-cloning-protocol-target-sequencing_1.pdf", target="_blank"),
+            ui.tags.a("here.", href="https://drive.google.com/file/d/1RBkiXhl7CCKxHuDNkaogvjkEykxkH4ws/view?usp=sharing", target="_blank"),
         ),
     ])
     
     return ui_card("Experimental Validation of Base Editing Guide RNAs", 'validation_section', *validation_section)
 
 def generate_prime_editing_visualization(guides_df, ref_sequence_input, substitution_position, PAM):
-    pegRNA_oligo_top = guides_df["PrimeDesign pegRNA Spacer Oligo Top"].tolist()
-    pegRNA_oligo_extension_bottom = guides_df['PrimeDesign pegRNA Extension Oligo Bottom'].tolist()
-    ngRNA_oligos = guides_df["PrimeDesign ngRNA Oligo Top"].tolist()
+    pegRNA_oligo_top = guides_df["pegRNA Spacer Oligo Top"].tolist()
+    pegRNA_oligo_extension_bottom = guides_df['pegRNA Extension Oligo Bottom'].tolist()
+    ngRNA_oligos = guides_df["ngRNA Oligo Top"].tolist()
 
     processed_pegRNA_oligos = visualization_peg_rnas(pegRNA_oligo_top, pegRNA_oligo_extension_bottom) if pegRNA_oligo_top and any(pegRNA_oligo_top) else None
     processed_ngRNA_oligos = visualization_ng_rnas(ngRNA_oligos) if ngRNA_oligos and any(ngRNA_oligos) and ngRNA_oligos[0] != 'n/a' else None
@@ -504,13 +489,11 @@ def generate_prime_editing_visualization(guides_df, ref_sequence_input, substitu
     
     # Add the introductory text with colored formatting 
     intro_text = ui.help_text(
-        "For each prime editing guide, your input will be displayed with the guide sequence highlighted. ",
-        "The ", ui.tags.b("red", style="color: red;"), " characters represent the pegRNA Spacer Oligo Top. ",
-        "The ", ui.tags.b("orange", style="color: orange;"), " characters will represent the PrimeDesign pegRNA Extension Oligo Bottom. ",
+        "This section provides a visualization of the recommended prime editing guide RNA design. ",
+        "The ", ui.tags.b("red", style="color: red;"), "characters represent the pegRNA. ",
         "The ", ui.tags.b("blue", style="color: blue;"), " characters represent the SpCas9 scaffold. ",
-        "And, the ", ui.tags.b("violet", style="color: violet;"), " characters represent the Nicking guide RNA Oligo Top and Bottom. ",
-        "Grey characters represent nucleotides not spanned by the guide. ",
-        "NOTE: the Nicking guide RNA might not be available for certain sequences."
+        "The ", ui.tags.b("orange", style="color: orange;"), " characters represent the pegRNA extension sequence, ",
+        "and, the ", ui.tags.b("violet", style="color: violet;"), " characters represent the nicking guide RNA (ngRNA, if applicable). Note that the ngRNA is only applicable to certain edits. ",
     )
     
     prime_visualization_elements.append(intro_text)
@@ -685,9 +668,8 @@ def server(input, output, session):
     # Define default values
     DEFAULT_BASE_EDITING_WINDOW_START = 4
     DEFAULT_BASE_EDITING_WINDOW_END = 9
-    DEFAULT_RS3_TOGGLE = False
-
-    
+    #DEFAULT_RS3_TOGGLE = False
+ 
     # Function to get base editing window values
     def get_base_editing_window(mutation_type=None):
         if mutation_type == "CGB":
@@ -697,11 +679,11 @@ def server(input, output, session):
         else:
             return DEFAULT_BASE_EDITING_WINDOW_START, DEFAULT_BASE_EDITING_WINDOW_END
         
-    def get_calculate_rs3():
-        if input.advanced_settings_toggle() % 2 == 1:
-            return input.rs3_toggle()
-        else:
-            return DEFAULT_RS3_TOGGLE
+    # def get_calculate_rs3():
+    #     if input.advanced_settings_toggle() % 2 == 1:
+    #         return input.rs3_toggle()
+    #     else:
+    #         return DEFAULT_RS3_TOGGLE
         
     @output
     @render.image
@@ -753,7 +735,6 @@ def server(input, output, session):
         else:
             return ui.div(ui.br(), ui.tags.b("Error: No file selected", style="color: red;", id='upload_status_message'))
 
-
     @reactive.Effect()
     def clear():
         value = input.clear()
@@ -776,7 +757,6 @@ def server(input, output, session):
 
             nonlocal input_file
             input_file = None
-
 
     @output
     @render.ui
@@ -808,15 +788,13 @@ def server(input, output, session):
                 ui.input_select("pam_type", "Select Desired Base Editing PAM", {"NGN": "NGN (Recommended)", "NGG": "NGG (Most Efficient)", "NGA": "NGA", "NNGRRT": "NNGRRT (SaCas9)", "NNNRRT": "NNNRRT (SaCas9-KKH)", "NRN": "NRN (SpRY)"}),
                 ui.div(
                     {"style": "display: flex; gap: 10px;"},
-                    ui.input_numeric("base_editing_window_start", "Base Editing Window Start", value=4, min=1),
-                    ui.input_numeric("base_editing_window_end", "Base Editing Window End", value=9, min=1)
+                    ui.input_numeric("base_editing_window_start", "Base Editing Window Start", value=4, min=1, max=20),
+                    ui.input_numeric("base_editing_window_end", "Base Editing Window End", value=9, min=1, max=20)
                 ),
-                ui.input_checkbox("rs3_toggle", "Calculate RuleSet3 Scores?", value=True)
-            )
+            #     ui.input_checkbox("rs3_toggle", "Calculate RuleSet3 Scores?", value=True)
+             )
         else:
             return ui.div()
-
-
 
     @reactive.Effect()
     def handle_pam_selection():
@@ -851,7 +829,7 @@ def server(input, output, session):
         selected_PAM = user_selected_pam.get() or "NGG"  # Default to NGG if no PAM is selected
         PAM = selected_PAM
         
-        calculate_rs3 = get_calculate_rs3()
+        #calculate_rs3 = get_calculate_rs3()
 
         @output
         @render.data_frame
@@ -879,7 +857,7 @@ def server(input, output, session):
                 p.set(counter, message="Finding guides")
                 ref_sequence_input = "".join(row['Original Sequence'].split()).upper()
                 edited_sequence_input = "".join(row['Desired Sequence'].split()).upper()
-                to_display_guides_df, guides_df = get_guides(ref_sequence_input, edited_sequence_input, selected_PAM, base_editing_window_start, base_editing_window_end, calculate_rs3=calculate_rs3)
+                to_display_guides_df, guides_df = get_guides(ref_sequence_input, edited_sequence_input, selected_PAM, base_editing_window_start, base_editing_window_end)
                 index_column = [str(counter)] * to_display_guides_df.shape[0]
                 to_display_guides_df.insert(loc=0, column='Input CSV Row Number', value=index_column)
                 dfs_to_merge_download.append(guides_df)
@@ -939,13 +917,13 @@ def server(input, output, session):
         selected_PAM = user_selected_pam.get() or "NGG"  # Default to NGG if no PAM is selected
         PAM = selected_PAM
         
-        calculate_rs3 = get_calculate_rs3()
+       # calculate_rs3 = get_calculate_rs3()
         
         valid_inputs, message = check_ref_edited_pair(ref_sequence_input, edited_sequence_input, base_editing_window_start, base_editing_window_end)
         if not valid_inputs:
             return display_error_message(message)
 
-        to_display_guides_df, guides_df = get_guides(ref_sequence_input, edited_sequence_input, selected_PAM, base_editing_window_start, base_editing_window_end, calculate_rs3=calculate_rs3)
+        to_display_guides_df, guides_df = get_guides(ref_sequence_input, edited_sequence_input, selected_PAM, base_editing_window_start, base_editing_window_end)
         to_display_guides_df = to_display_guides_df.drop(columns=['Original Sequence', 'Desired Sequence'])
         to_display_guides_df.insert(loc=0, column='Guide', value=[f"Guide {i + 1}" for i in range(to_display_guides_df.shape[0])])
 
@@ -1024,14 +1002,14 @@ def server(input, output, session):
         if "Base Editing" in filtered_guides_df['Editing Technology'].values:
             guide_title = "Recommended Base Editing Guide RNAs"
             help_text = ui.help_text(
-                '''Note: Multiple guide RNAs are shown with the ability to toggle based on optimal on-target and off-target scoring. The off-target score is calculated using the CFD score algorithm where a higher score indicates a lower likelihood of off-target activity. The on-target score is calculated using the default RuleSet1 algorithm where a higher score indicates greater efficiency of guide RNA binding to the genomic target sequence. For additional information on these algorithms, please see the original publication ''',
+                '''Note: Multiple guide RNAs are shown with the ability to toggle based on optimal on-target and off-target scoring. The off-target score is calculated using the CFD score algorithm where a higher score indicates a lower likelihood of off-target activity. The on-target score is calculated using the RuleSet1 algorithm where a higher score indicates greater efficiency of guide RNA binding to the genomic target sequence. For additional information on these algorithms, please see the original publication ''',
                 ui.tags.a('Doench et al. 2014 Nat Biotechnol.', {'href': 'https://pubmed.ncbi.nlm.nih.gov/25184501/', 'target': '_blank'}),
                 ui.tags.b(" A higher score is better for both algorithms.", style="text-decoration: bold")
             )
         else:
             guide_title = "Recommended Prime Editing Guide RNAs"
             help_text = ui.help_text(
-                '''Note: We use the PrimeDesign algorithm with default parameters (including NGG PAM) to identify the single most optimal prime editing guide RNA. For more advanced usage please visit the ''',
+                '''Note: We use the PrimeDesign algorithm with default parameters (including NGG PAM), to identify the single most optimal prime editing guide RNA. For more advanced usage please visit the ''',
                 ui.tags.a('PrimeDesign portal', {'href': 'https://primedesign.pinellolab.partners.org', 'target': '_blank'}),
                 ''' or see the original publication ''',
                 ui.tags.a('(Hsu et al. 2021 Nat Commun)', {'href': 'https://pubmed.ncbi.nlm.nih.gov/33589617/', 'target': '_blank'}),
