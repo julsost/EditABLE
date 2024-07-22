@@ -784,7 +784,7 @@ def server(input, output, session):
     def advanced_settings():
         if input.advanced_settings_toggle() % 2 == 1:
             return ui.TagList(
-                ui.input_select("pam_type", "Select Desired Base Editing PAM", {"NGN": "NGN (Recommended)", "NGG": "NGG (Most Efficient)", "NGA": "NGA", "NNGRRT": "NNGRRT (SaCas9)", "NNNRRT": "NNNRRT (SaCas9-KKH)", "NRN": "NRN (SpRY)"}),
+                ui.input_select("pam_type", "Select Desired Base Editing PAM", {"NGG": "NGG (Most Efficient)", "NGN": "NGN (Recommended)", "NGA": "NGA", "NNGRRT": "NNGRRT (SaCas9)", "NNNRRT": "NNNRRT (SaCas9-KKH)", "NRN": "NRN (SpRY)"}),
                 ui.div(
                     {"style": "display: flex; gap: 10px;"},
                     ui.input_numeric("base_editing_window_start", "Base Editing Window Start", value=4, min=1, max=20),
@@ -806,7 +806,7 @@ def server(input, output, session):
         return ui.div(ui.tags.b(message, style="color: red;", id='error_message'))
 
    
-   #function to run if the user inputs a csv  
+    # function to run if the user inputs a CSV
     @output
     @render.ui
     @reactive.event(input.find_guides_csv)
@@ -821,15 +821,13 @@ def server(input, output, session):
         base_editing_window_start, base_editing_window_end = get_base_editing_window()
         base_editing_window = f"{base_editing_window_start}-{base_editing_window_end}"
         
-        valid_inputs, message = input_check(None, None, df, base_editing_window_start, base_editing_window_end )
+        valid_inputs, message = input_check(None, None, df, base_editing_window_start, base_editing_window_end)
         if not valid_inputs:
             return display_error_message(message)
 
         selected_PAM = user_selected_pam.get() or "NGG"  # Default to NGG if no PAM is selected
         PAM = selected_PAM
         
-        #calculate_rs3 = get_calculate_rs3()
-
         @output
         @render.data_frame
         def render_Results():
@@ -844,7 +842,10 @@ def server(input, output, session):
         @session.download(filename=lambda: f"guides-{date.today().isoformat()}-{datetime.now().strftime('%H-%M-%S')}.csv")
         async def download_Results():
             nonlocal guides_df
-            yield guides_df.to_csv()
+            # Ensure the "Input CSV Row Number" is the first column
+            cols = ['Input CSV Row Number'] + [col for col in guides_df.columns if col != 'Input CSV Row Number']
+            guides_df = guides_df[cols]
+            yield guides_df.to_csv(index=False)
         
         dfs_to_merge_download = []
         dfs_to_merge_display = []
@@ -859,6 +860,7 @@ def server(input, output, session):
                 to_display_guides_df, guides_df = get_guides(ref_sequence_input, edited_sequence_input, selected_PAM, base_editing_window_start, base_editing_window_end)
                 index_column = [str(counter)] * to_display_guides_df.shape[0]
                 to_display_guides_df.insert(loc=0, column='Input CSV Row Number', value=index_column)
+                guides_df.insert(loc=0, column='Input CSV Row Number', value=index_column)
                 dfs_to_merge_download.append(guides_df)
                 dfs_to_merge_display.append(to_display_guides_df)
                 counter += 1
@@ -866,16 +868,6 @@ def server(input, output, session):
         to_display_guides_df = pd.concat(dfs_to_merge_display)
         to_display_guides_df = to_display_guides_df.drop(columns=['Original Sequence', 'Desired Sequence'])
         guides_df = pd.concat(dfs_to_merge_download)
-        base_editing_guides_df = guides_df[guides_df['Editing Technology'] == 'Base Editing']
-        prime_editing_guides_df = guides_df[guides_df['Editing Technology'] == 'Prime Editing']
-        filtered_guides_df = to_display_guides_df[to_display_guides_df['Editing Technology'].isin(['Base Editing', 'Prime Editing'])]
-        
-        # Tells users to try other PAMs if default isn't available
-        if not base_editing_guides_df.empty:
-            pams = guides_df["PAM"].tolist()
-            PAM = pams[0]
-        else:
-            PAM = selected_PAM
 
         ui_elements = [
             ui.help_text(
@@ -899,6 +891,7 @@ def server(input, output, session):
                 *ui_elements
             )
         )
+
 
    #function to run if the user inputs a text sequence 
     @output
