@@ -1,5 +1,5 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/editable/public_html/
+    - export DEPLOYPATH=/home/editable/editable-app.stanford.edu/
     - /bin/cp -R docs/* $DEPLOYPATH
