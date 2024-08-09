@@ -1,0 +1,5 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/editable/public_html/
+    - /bin/cp -R docs/* $DEPLOYPATH
