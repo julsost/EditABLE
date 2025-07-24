@@ -1002,7 +1002,7 @@ def server(input, output, session):
             guide_title = "Recommended Prime Editing Guide RNAs"
             help_text = ui.help_text(
                 '''Note: We use the PrimeDesign algorithm with default parameters (including NGG PAM), to identify the single most optimal prime editing guide RNA. For more advanced usage please visit the ''',
-                ui.tags.a('PrimeDesign portal', {'href': 'https://primedesign.pinellolab.partners.org', 'target': '_blank'}),
+                ui.tags.a('PrimeDesign portal', {'href': 'https://www.stanford.edu/', 'target': '_blank'}),
                 ''' or see the original publication ''',
                 ui.tags.a('(Hsu et al. 2021 Nat Commun)', {'href': 'https://pubmed.ncbi.nlm.nih.gov/33589617/', 'target': '_blank'}),
                 '''.'''
