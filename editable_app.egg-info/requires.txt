@@ -1,0 +1,6 @@
+pandas
+numpy
+regex
+biopython
+requests
+beautifulsoup4
