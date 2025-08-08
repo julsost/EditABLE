@@ -1,0 +1,12 @@
+Metadata-Version: 2.4
+Name: editable_app
+Version: 0.1.0
+License-File: LICENSE
+Requires-Dist: pandas
+Requires-Dist: numpy
+Requires-Dist: regex
+Requires-Dist: biopython
+Requires-Dist: requests
+Requires-Dist: beautifulsoup4
+Dynamic: license-file
+Dynamic: requires-dist
