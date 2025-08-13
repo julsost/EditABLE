@@ -9,7 +9,7 @@ from utils import get_guides, almost_reverse_complement, get_editor_info, proces
 from shiny import App, render, ui, reactive
 from shiny.types import ImgData
 
-
+VERSION = "compute-fix-2025-08-13-1"
 
 bases = {"A", "C", "G", "T"}
 accepted_bases = {"A", "C", "G", "T", "-"}
@@ -26,6 +26,7 @@ def ui_card(title, id, *args):
 
 
 app_ui = ui.page_fluid(
+    ui.h6(f"Build: {VERSION}"),
     {"id": "main-content"},
     ui.output_image("display_logo", inline=True),
     ui.output_image("stanford_logo", inline=True),
