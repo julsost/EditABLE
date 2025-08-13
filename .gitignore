@@ -6,3 +6,4 @@ editable_app/reports/
 *.myenv
 *.venv/*
 *.myenv/*
+*.pyc
