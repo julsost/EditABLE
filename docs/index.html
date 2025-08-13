@@ -10,10 +10,14 @@
     ></script>
     <script type="module">
       import { runExportedApp } from "./shinylive/shinylive.js";
+      const relPath = window.location.pathname
+    .replace(/\/[^\/]*$/, "") // strip filename if any
+    .replace(/^\//, "");      // remove leading slash for consistency
+
       runExportedApp({
         id: "root",
         appEngine: "python",
-        relPath: "",
+        relPath: relPath || ".", // fallback to current dir if empty
       });
     </script>
     <link rel="stylesheet" href="./shinylive/style-resets.css" />
