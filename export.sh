@@ -23,11 +23,12 @@ shinylive export "$EXPORT_DIR" "$DOCS_DIR"
 
 echo "=== Patching index.html for dynamic relPath ==="
 perl -0777 -i -pe '
-s#<script type="module">\s*import \{ runExportedApp \}.*?runExportedApp\(\{.*?}\);\s*</script>#<script type="module">
-  import { runExportedApp } from "./shinylive/shinylive.js";
+s#<script type="module">\s*import\s+runExportedApp\s+from\s+"\.\/shinylive\/shinylive\.js";\s*runExportedApp\(\{.*?}\);\s*</script>#<script type="module">
+  import runExportedApp from "./shinylive/shinylive.js";
   const relPath=((p)=>{const i=p.lastIndexOf("/");return i<=0?"":p.slice(1,i);})(window.location.pathname);
   runExportedApp({ id: "root", appEngine: "python", relPath: relPath || "." });
 </script>#s' "$DOCS_DIR/index.html"
+
 
 
 

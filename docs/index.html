@@ -9,10 +9,13 @@
       type="module"
     ></script>
     <script type="module">
-  import { runExportedApp } from "./shinylive/shinylive.js";
-  const relPath=((p)=>{const i=p.lastIndexOf("/");return i<=0?"":p.slice(1,i);})(window.location.pathname);
-  runExportedApp({ id: "root", appEngine: "python", relPath: relPath || "." });
-</script>
+      import { runExportedApp } from "./shinylive/shinylive.js";
+      runExportedApp({
+        id: "root",
+        appEngine: "python",
+        relPath: "",
+      });
+    </script>
     <link rel="stylesheet" href="./shinylive/style-resets.css" />
     <link rel="stylesheet" href="./shinylive/shinylive.css" />
     
