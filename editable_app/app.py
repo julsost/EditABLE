@@ -26,13 +26,12 @@ def ui_card(title, id, *args):
 
 
 app_ui = ui.page_fluid(
-    ui.h6(f"Build: {VERSION}"),
     {"id": "main-content"},
     ui.output_image("display_logo", inline=True),
     ui.output_image("stanford_logo", inline=True),
     ui.br(),
     ui.help_text(
-        '''WELCOME to EditABLE!! We have designed this tool as a starting point for determining the optimal gene editing tool for a single gene edit. 
+        '''Welcome to EditABLE! We have designed this tool as a starting point for determining the optimal gene editing tool for a single gene edit. 
         Our algorithm is pending publication, but at a high level, it prioritizes base editing due to greater efficiency followed by prime editing. 
         Please refer to the following papers for more information on base and prime editing:'''
     ),
