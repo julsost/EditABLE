@@ -31,7 +31,7 @@ app_ui = ui.page_fluid(
     ui.output_image("stanford_logo", inline=True),
     ui.br(),
     ui.help_text(
-        '''Welcome to EditABLE! We have designed this tool as a starting point for determining the optimal gene editing tool for a single gene edit. 
+        '''<span style="color:blue"><b>Welcome to EditABLE!</b></span> We have designed this tool as a starting point for determining the optimal gene editing tool for a single gene edit. 
         Our algorithm is pending publication, but at a high level, it prioritizes base editing due to greater efficiency followed by prime editing. 
         Please refer to the following papers for more information on base and prime editing:'''
     ),
