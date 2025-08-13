@@ -9,17 +9,10 @@
       type="module"
     ></script>
     <script type="module">
-      import { runExportedApp } from "./shinylive/shinylive.js";
-      const relPath = window.location.pathname
-    .replace(/\/[^\/]*$/, "") // strip filename if any
-    .replace(/^\//, "");      // remove leading slash for consistency
-
-      runExportedApp({
-        id: "root",
-        appEngine: "python",
-        relPath: relPath || ".", // fallback to current dir if empty
-      });
-    </script>
+  import { runExportedApp } from "./shinylive/shinylive.js";
+  const relPath=((p)=>{const i=p.lastIndexOf("/");return i<=0?"":p.slice(1,i);})(window.location.pathname);
+  runExportedApp({ id: "root", appEngine: "python", relPath: relPath || "." });
+</script>
     <link rel="stylesheet" href="./shinylive/style-resets.css" />
     <link rel="stylesheet" href="./shinylive/shinylive.css" />
     
