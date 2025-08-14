@@ -142,10 +142,9 @@ fi
 #######################################
 echo "=== Patching index.html to auto-detect relPath ==="
 
-# 1) Insert scope helper once, right before the FIRST <script type="module"> tag.
-#    We match any <script ... type="module" ...> with attrs in any order.
+# 1) Insert scope helper once.
+#    First, try right before the FIRST <script type="module"> tag (attrs in any order).
 perl -0777 -i -pe '
-  my $forced = $ENV{FORCED_BASE} // "";
   my $marker = "BEGIN_REL_PATH_AUTODETECT";
   if (index($_, $marker) == -1) {
     s~(<script\b[^>]*\btype=(["'\''])module\2[^>]*>)~<!-- BEGIN_REL_PATH_AUTODETECT -->
@@ -171,9 +170,44 @@ $1~is;
   }
 ' "$INDEX"
 
-# 2) Replace relPath in runExportedApp options object (idempotent).
+#    If not inserted yet (no <script type="module"> found), insert before </head> as a fallback.
 perl -0777 -i -pe '
-  s/(runExportedApp\s*\(\s*\{\s*[^}]*?)relPath\s*:\s*["'\''][^"'\'']*["'\'']/$1relPath: window.__SL_SCOPE__ || ""/s;
+  my $marker = "BEGIN_REL_PATH_AUTODETECT";
+  if (index($_, $marker) == -1) {
+    s~</head>~<!-- BEGIN_REL_PATH_AUTODETECT -->
+<script>
+  // Computes scope for both localhost and GitHub Pages project sites.
+  // If FORCED_BASE is provided (e.g., "/EditABLE"), it will be used.
+  (function () {
+    var forced = '."'$FORCED_BASE'".q{};
+    if (forced && typeof forced === "string") {
+      window.__SL_SCOPE__ = forced;
+      return;
+    }
+    // directory containing index.html
+    var p = location.pathname.replace(/\/index\.html?$/, "");
+    // strip trailing slash (but keep leading)
+    p = p.replace(/\/$/, "");
+    // Special case: root path becomes ""
+    window.__SL_SCOPE__ = (p === "" || p === "/") ? "" : p;
+  })();
+</script>
+<!-- END_REL_PATH_AUTODETECT -->
+</head>~is;
+  }
+' "$INDEX"
+
+# 2) Ensure relPath is set in runExportedApp options (idempotent).
+#    2a) Replace existing relPath value if present.
+perl -0777 -i -pe '
+  s/(runExportedApp\s*\(\s*\{\s*[^}]*)relPath\s*:\s*["'\''][^"'\'']*["'\'']/$1relPath: window.__SL_SCOPE__ || ""/s;
+' "$INDEX"
+
+#    2b) If relPath is not present, insert it right after the opening brace.
+perl -0777 -i -pe '
+  if ($_ !~ /runExportedApp\s*\(\s*\{[^{]*\brelPath\b/s) {
+    s/(runExportedApp\s*\(\s*\{\s*)/$1relPath: window.__SL_SCOPE__ || "", /s;
+  }
 ' "$INDEX"
 
 #######################################
