@@ -435,15 +435,25 @@ def create_twin_prime_editing_plasmid_card(guides_df, editor_info, editor_url):
 
 def create_integrase_plasmid_card(guides_df, editor_info, editor_url):
     return ui_card(
-        "Suggested Addgene Plasmid for Integrase Step",
+        "Suggested Addgene Plasmids for Bxb1 Integration",
         "integrase_only_card",
-        ui.help_text("Recommended Integrase Plasmid: pCAG-NLS-HA-Bxb1 (Addgene: 51271)"),
+        ui.help_text("You’ll need both of these plasmids to perform Bxb1-mediated site-specific integration."),
         ui.br(),
         ui.br(),
         ui.div(
-            {"class": "d-flex"},
-            ui.tags.a("View BxB1 Integrase Plasmid", href="https://www.addgene.org/51271/", target="_blank",
-                      class_="btn btn-primary"),
+            {"class": "d-flex gap-2"},
+            ui.tags.a(
+                "View Bxb1 Integrase Plasmid",
+                href="https://www.addgene.org/51271/",
+                target="_blank",
+                class_="btn btn-primary"
+            ),
+            ui.tags.a(
+                "View attP Donor Vector (Clone Your Insert)",
+                href="https://www.addgene.org/60561/",
+                target="_blank",
+                class_="btn btn-primary"
+            ),
         )
     )
 
@@ -691,6 +701,75 @@ def generate_integrase_protocols_section(guides_df):
     ]
 
     return ui_card("Detailed Bxb1 Integrase-Mediated Insertion Protocol", 'integrase_protocol_section', *integrase_section)
+
+def generate_donor_protocols_section(guides_df):
+    integrase_section = [
+        ui.help_text(
+            ui.tags.b("Donor Plasmid Construction Protocol (Insert + attP Site):", style="text-decoration: bold"),
+            ui.br(),
+
+            ui.tags.span("Part 1: Prepare Your Insert"),
+            ui.br(),
+            ui.tags.ul(
+                ui.tags.li("Design your insert: include your gene or sequence of interest."),
+                ui.tags.li(
+                    "Include regulatory elements if needed: Promoter (e.g., CMV, EF1a), Kozak sequence, and PolyA tail."),
+                ui.tags.li("Add flanking restriction sites (e.g., EcoRI/BamHI) or Gibson overlaps."),
+            ),
+            ui.br(),
+            ui.tags.ul(
+                ui.tags.li("Amplify your insert via high-fidelity PCR, or order it as a synthetic gBlock."),
+                ui.tags.li("Run the PCR product or gBlock on an agarose gel."),
+                ui.tags.li("Excise and purify using a gel extraction kit."),
+            ),
+            ui.br(),
+
+            ui.tags.span("Part 2: Prepare the Vector"),
+            ui.br(),
+            ui.tags.ul(
+                ui.tags.li("Use pLenti-attP-DEST (Addgene #60561) or another attP-containing vector."),
+                ui.tags.li(
+                    "Digest 1–2 µg of the vector using two restriction enzymes compatible with your insert (e.g., EcoRI and BamHI)."),
+                ui.tags.li("(Optional) Treat the digested vector with alkaline phosphatase to prevent re-ligation."),
+                ui.tags.li("Run the digested vector on an agarose gel and purify the linearized backbone."),
+            ),
+            ui.br(),
+
+            ui.tags.span("Part 3: Clone the Insert into the Vector"),
+            ui.br(),
+            ui.tags.span("Option A: Restriction-Ligation Cloning"),
+            ui.tags.ul(
+                ui.tags.li("Set up ligation reaction using T4 DNA ligase with a 3:1 molar ratio of insert to vector."),
+                ui.tags.li("Incubate at 16°C overnight or 1–2 hours at room temperature."),
+                ui.tags.li("Transform 5–10 µL of the ligation mix into competent E. coli (e.g., DH5α)."),
+                ui.tags.li("Plate on LB agar with appropriate antibiotic (e.g., Ampicillin)."),
+                ui.tags.li("Incubate overnight at 37°C."),
+            ),
+            ui.br(),
+            ui.tags.span("Option B: Gibson Assembly"),
+            ui.tags.ul(
+                ui.tags.li("Design insert and vector fragments with 20–40 bp overlaps."),
+                ui.tags.li("Mix insert and linearized vector with Gibson Assembly mix."),
+                ui.tags.li("Incubate at 50°C for 1 hour."),
+                ui.tags.li("Transform into competent E. coli and plate as above."),
+            ),
+            ui.br(),
+
+            ui.tags.span("Part 4: Screen and Confirm"),
+            ui.br(),
+            ui.tags.ul(
+                ui.tags.li("Pick 4–8 colonies and perform colony PCR to screen for insert presence."),
+                ui.tags.li("Alternatively, miniprep and perform a diagnostic restriction digest."),
+                ui.tags.li("Miniprep positive clones and submit for Sanger sequencing."),
+                ui.tags.li("Verify correct insert sequence, orientation, and presence of attP site."),
+            ),
+            ui.br(),
+        )
+    ]
+
+    return ui_card("Donor Plasmid Construction (Insert + attP)", 'integrase_protocol_section',
+                   *integrase_section)
+
 
 
 
@@ -1515,8 +1594,7 @@ def server(input, output, session):
 
             ui_elements.append(generate_prime_protocols_section(prime_editing_guides_df))
 
-
-        if 'Twin Prime Editing (Creating a Bxb1 Site)' in guides_df['Editing Technology'].values:
+        if 'Prime Editing (Creating a Bxb1 Site)' in guides_df['Editing Technology'].values:
             twin_prime_editing_plasmid_card = create_twin_prime_editing_plasmid_card(guides_df, editor_info, editor_url)
             ui_elements.append(twin_prime_editing_plasmid_card)
 
@@ -1531,13 +1609,17 @@ def server(input, output, session):
             integrase_plasmid_card = create_integrase_plasmid_card(guides_df, editor_info, editor_url)
             ui_elements.append(integrase_plasmid_card)
 
-    
+            ui_elements.append(generate_donor_protocols_section(prime_editing_guides_df))
+
             ui_elements.append(ui_card(
                 "Visualization of BxbI Integrase Step",
                 "prime_editing_visualization",
                 *generate_integrase_visualization(guides_df, ref_sequence_input, substitution_position, PAM)
             ))
     
+            ui_elements.append(generate_integrase_protocols_section(prime_editing_guides_df))
+
+        if 'Deletion >80bp: Use Prime-Del' in guides_df['Editing Technology'].values:
             ui_elements.append(generate_integrase_protocols_section(prime_editing_guides_df))
 
 
