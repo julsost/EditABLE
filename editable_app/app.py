@@ -31,7 +31,7 @@ app_ui = ui.page_fluid(
     ui.output_image("stanford_logo", inline=True),
     ui.br(),
     ui.help_text(
-        '''Welcome to EditABLE! We have designed this tool as a starting point for determining the optimal gene editing tool for a single gene edit. 
+        '''Welcome to EditABLE!! We have designed this tool as a starting point for determining the optimal gene editing tool for a single gene edit. 
         Our algorithm is pending publication, but at a high level, it prioritizes base editing due to greater efficiency followed by prime editing. 
         Please refer to the following papers for more information on base and prime editing:'''
     ),
@@ -747,7 +747,7 @@ def generate_prime_editing_visualization(guides_df, ref_sequence_input, substitu
 
     # Add the introductory text with colored formatting
     intro_text = ui.help_text(
-        "This section provides a visualization of the recommended prime editing guide RNA design. ",
+        "This section provides a visualization of the recommended prime editing guide RNA design for installing a BxbI integration site. ",
         "The ", ui.tags.b("red", style="color: red;"), " characters represent the pegRNA spacer, ",
         "the ", ui.tags.b("blue", style="color: blue;"), " characters represent the SpCas9 scaffold, ",
         "the ", ui.tags.b("orange", style="color: orange;"), " characters represent the pegRNA extension sequence, ",
@@ -1523,7 +1523,7 @@ def server(input, output, session):
             ui_elements.append(twin_prime_editing_plasmid_card)
 
             ui_elements.append(ui_card(
-                "Visualization of Twin Prime Editing Guides - BxbI integration step",
+                "Visualization of Prime Editing Guides - Creating BxbI Integration site",
                 "prime_editing_visualization",
                 *generate_twin_prime_editing_visualization(guides_df, ref_sequence_input, substitution_position, PAM)
             ))
@@ -1535,7 +1535,7 @@ def server(input, output, session):
 
     
             ui_elements.append(ui_card(
-                "Visualization of BxbI Integrase",
+                "Visualization of BxbI Integrase Step",
                 "prime_editing_visualization",
                 *generate_integrase_visualization(guides_df, ref_sequence_input, substitution_position, PAM)
             ))
