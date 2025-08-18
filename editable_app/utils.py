@@ -382,8 +382,12 @@ editor_data = {
 # determine the mutation type for the base editors
 def get_editor_info(ref_seq, edited_seq, pams):
     mutation_type = "PrimeEditor"  # Default mutation type is PrimeEditor
+    # If there are >=3 base differences OR sequence lengths differ → always PrimeEditor
+    if len(ref_seq) != len(edited_seq) or sum(r != e for r, e in zip(ref_seq, edited_seq)) >= 3:
+        return editor_data['PrimeEditor']['default'], "PrimeEditor"
     for ref_base, edit_base in zip(ref_seq, edited_seq):
         if ref_base != edit_base:
+            print("ref_base != edit_base")
             # Create a mutation identifier from reference and edited bases
             edit_type = f"{ref_base}>{edit_base}"
 
@@ -391,6 +395,7 @@ def get_editor_info(ref_seq, edited_seq, pams):
             if edit_type in ["A>G", "T>C"]:
                 mutation_type = "ABE"
             elif edit_type in ["G>A", "C>T"]:
+                print("edit_type in g > a, c>t")
                 mutation_type = "CBE"
             elif edit_type in ["C>G", "G>C"]:
                 mutation_type = "CGB"
@@ -522,15 +527,10 @@ def run_prime_design(ref_sequence, edited_sequence, substitution_position):
 
 # helper function to handle deletions: process cases where there are deletions.
 def handle_deletions(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original):
-    print("running deletions")
     deletion_start = str(edited_sequence).find('-')
     deletion_end = str(edited_sequence).rfind('-')
-    if deletion_end - deletion_start + 1 > 80:
-        print("seq in >80")
-        add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original,
-                                       "Deletion >80bp: Use Prime-Del")
-
-    else:
+    if deletion_end - deletion_start + 1 <= 80:
+        print("seq in <80")
         print("seq in <80bp")
         primedesign_input = str(
             ref_sequence[:deletion_start] + f"(-{ref_sequence[deletion_start: deletion_end + 1]})" + ref_sequence[
@@ -542,6 +542,56 @@ def handle_deletions(ref_sequence, edited_sequence, df_dict, ref_sequence_origin
         else:
             add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original,
                                            "Use Twin Prime Editing/Integrase/HDR")
+            pass
+
+
+    else:
+        # Prime-del pipeline for large deletions (>80 bp)
+        try:
+            # design paired pegs with tight (precise) windows first
+            pdel_pairs = _pdel_design_by_start_end(
+                seq=str(ref_sequence_original),
+                start=deletion_idx,
+                end=deletion_end,
+                homology_length=30,  # default homology used by the published script
+                precise=True  # try exact endpoints first
+            )
+
+            if len(pdel_pairs) == 0:
+                # if nothing precise is found, relax to ±50bp windows (Prime-del fallback)
+                pdel_pairs = _pdel_design_by_start_end(
+                    seq=str(ref_sequence_original),
+                    start=deletion_idx,
+                    end=deletion_end,
+                    homology_length=30,
+                    precise=False
+                )
+
+            if len(pdel_pairs) == 0:
+                # nothing found at all — fall back to a single informative row
+                add_insertion_deletion_entries(
+                    df_dict, ref_sequence_original, edited_sequence_original,
+                    "Prime-Del: No peg-pair candidates found near the requested breakpoints"
+                )
+            else:
+                # format & append Prime-del rows into your unified results table
+                _pdel_update_df_dict(
+                    df_dict=df_dict,
+                    ref_sequence_original=str(ref_sequence_original),
+                    edited_sequence_original=str(edited_sequence_original),
+                    pairs=pdel_pairs,
+                    max_rows=50  # keep things snappy in UI
+                )
+        except Exception as e:
+            print(f"Prime-del error: {e}")
+            add_insertion_deletion_entries(
+                df_dict, ref_sequence_original, edited_sequence_original,
+                "Prime-Del: Unexpected error while designing paired pegs"
+            )
+
+
+        #add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original,"Deletion >80bp: Use Prime-Del")
+
     return df_dict
 
 # helper function to handle insertions: process cases where there are insertions.
@@ -669,6 +719,182 @@ def render_dataframe(df_dict):
 
     return df_render, df_full
 
+# ========= Prime-del (minimal port) ==========================================
+# This is a small, internalized subset of shendurelab/Prime-del that we use
+# only when handling large deletions (>80 bp). No external dependency required.
+
+def _pdel_reverse_complement(seq: str) -> str:
+    # Use your existing util to keep behavior identical everywhere
+    return reverse_complement(seq)
+
+def _pdel_gen_guides(seq: str):
+    """
+    Generate NGG-spaced 20nt spacers with nick positions as in Prime-del:
+      - FWD nick = spacer start + 17
+      - REV nick = match start + 6 (spacer is RC of seq[m.start()+3:m.start()+23])
+    Works with Python's built-in 're' (no 'overlapped' flag).
+    """
+    # Forward: 21 nts + 'GG' PAM (we take the first 20 as the spacer)
+    fwd = [(seq[m.start():m.start()+20], m.start()+17)
+           for m in re.finditer(r"(?=(?:[ACGT]{21}GG))", seq)]
+    # Reverse: 'CC' PAM on the forward strand + 21 nts (peg spacer is RC of [m+3:m+23])
+    rev = [(reverse_complement(seq[m.start()+3:m.start()+23]), m.start()+6)
+           for m in re.finditer(r"(?=(?:CC[ACGT]{21}))", seq)]
+    return fwd, rev
+
+def _pdel_gen_guides(seq: str):
+    """
+    Generate NGG-spaced 20nt spacers with nick positions as in Prime-del:
+      - FWD nick = spacer start + 17
+      - REV nick = match start + 6 (spacer is RC of seq[m.start()+3:m.start()+23])
+    Works with 'regex' or built-in 're' via lookaheads (no 'overlapped' arg).
+    """
+    # Forward: 21 nts + 'GG' PAM (we take the first 20 as the spacer)
+    fwd = [(seq[m.start():m.start()+20], m.start()+17)
+           for m in re.finditer(r"(?=(?:[ACGT]{21}GG))", seq)]
+    # Reverse: 'CC' PAM on the forward strand + 21 nts (peg spacer is RC of [m+3:m+23])
+    rev = [(_pdel_reverse_complement(seq[m.start()+3:m.start()+23]), m.start()+6)
+           for m in re.finditer(r"(?=(?:CC[ACGT]{21}))", seq)]
+    # Return only spacer and nick positions (orientation is implicit from which list)
+    return fwd, rev
+
+def _pdel_gen_pegpair(g1, g2, seq: str, homology_len: int, precise: bool=False, nick_start: int=None, nick_end: int=None):
+    """
+    g1 on fwd, g2 on rev. Shapes:
+      g1 = (spacer1, nick1), g2 = (spacer2, nick2)
+    Returns a tuple mirroring the Shendure script columns:
+      (RNA_1, homology+PBS_1, nick_1, RNA_2, homology+PBS_2, nick_2,
+       Comments, Deletion size, Expected deletion result)
+    """
+    # Homology arms (downstream of nick on the target strands used by Prime-del)
+    hom1 = _pdel_reverse_complement(seq[g2[1]: g2[1] + homology_len])
+    hom2 = seq[g1[1] - homology_len: g1[1]]
+
+    # PBS (always 13nt as used in upstream gen_pegpair)
+    pbs1 = _pdel_reverse_complement(g1[0][4:17])  # 17-13 == 4
+    pbs2 = _pdel_reverse_complement(g2[0][4:17])
+
+    note = []
+    if 'TTTT' in hom1 or 'TTTT' in hom2:
+        note.append('PolyT in homology; consider increasing homology length or shifting pegs')
+    if (hom1[:5].count('C') + hom1[:5].count('G') >= 4) or (hom2[:5].count('C') + hom2[:5].count('G') >= 4):
+        note.append('High GC at homology start; may affect priming')
+
+    if precise and (nick_start is not None) and (nick_end is not None):
+        ins1 = _pdel_reverse_complement(seq[g1[1]: nick_start])  # sequence to insert in peg1 extension
+        ins2 = seq[nick_end: g2[1]]                              # sequence to insert in peg2 extension
+        if 'TTTT' in ins1 or 'TTTT' in ins2:
+            note.append('PolyT in peg insertion sequence')
+        ext1 = hom1 + ins1 + pbs1
+        ext2 = hom2 + ins2 + pbs2
+        dels = (nick_end - nick_start)
+        expected = seq[:nick_start] + '-' * dels + seq[nick_end:]
+    else:
+        ext1 = hom1 + pbs1
+        ext2 = hom2 + pbs2
+        dels = (g2[1] - g1[1])
+        expected = seq[:g1[1]] + '-' * dels + seq[g2[1]:]
+
+    return (
+        g1[0], ext1, g1[1],
+        g2[0], ext2, g2[1],
+        '; '.join(note) if note else '',
+        dels,
+        expected
+    )
+
+def _pdel_design_by_start_end(seq: str, start: int, end: int, homology_length: int=30, precise: bool=True):
+    """
+    Wraps Prime-del's peg_design_by_start_end for a single sequence.
+    - precise=True: only return pairs whose nick sites are within ~[-20,+2..3] around start/end,
+      matching the upstream windows for exact deletions.
+    - precise=False: relaxed ±50bp windows, or pairs matching either side.
+    """
+    fwd, rev = _pdel_gen_guides(seq)
+    pairs = []
+
+    if precise:
+        for a in fwd:
+            for b in rev:
+                if (a[1] in range(start-20, start+3)) and (b[1] in range(end-20, end+3)):
+                    pairs.append(_pdel_gen_pegpair(a, b, seq, homology_length, precise=True, nick_start=start, nick_end=end))
+    else:
+        # relaxed both-sides first
+        for a in fwd:
+            for b in rev:
+                if (a[1] in range(start-50, start+50)) and (b[1] in range(end-50, end+50)):
+                    pairs.append(_pdel_gen_pegpair(a, b, seq, homology_length, precise=False))
+
+        # if still empty, allow “either side” matches (Prime-del fallback)
+        if not pairs:
+            for a in fwd:
+                for b in rev:
+                    if (a[1] in range(start-50, start+50)) and (b[1] > a[1] + 20):
+                        pairs.append(_pdel_gen_pegpair(a, b, seq, homology_length, precise=False))
+                    elif (b[1] in range(end-50, end+50)) and (a[1] < b[1] - 20):
+                        pairs.append(_pdel_gen_pegpair(a, b, seq, homology_length, precise=False))
+
+    try:
+        return np.array(pairs, dtype=object)
+    except Exception:
+        return pairs  # fall back to list if numpy is unhappy
+
+def _pdel_update_df_dict(df_dict: dict, ref_sequence_original: str, edited_sequence_original: str, pairs, max_rows: int=50):
+    """
+    Append Prime-del results to your unified df_dict in a way that reuses existing
+    columns but also adds a few “Prime-Del …” columns that render nicely in your table.
+    """
+    def _split_ext(ext: str):
+        pbs = ext[-13:]
+        hom = ext[:-13]
+        return hom, pbs
+
+    n = min(max_rows, len(pairs))
+    for i in range(n):
+        (rna1, ext1, nick1, rna2, ext2, nick2, note, dels, expected) = pairs[i]
+        hom1, pbs1 = _split_ext(ext1)
+        hom2, pbs2 = _split_ext(ext2)
+
+        # Reuse your standard columns so the row shows up everywhere as usual
+        df_dict['Original Sequence'].append(ref_sequence_original)
+        df_dict['Desired Sequence'].append(edited_sequence_original)
+        df_dict['Editing Technology'].append('Prime-Del')
+
+        # The “prime editing” columns can carry useful bits for Prime-del too
+        df_dict['pegRNA Annotation'].append(f"Prime-Del pair (exact delete {dels}bp). Notes: {note if note else '—'}")
+        df_dict['pegRNA PBS'].append(f"peg1:{pbs1} | peg2:{pbs2}")
+        df_dict['pegRNA RTT'].append(f"peg1-homology:{hom1} | peg2-homology:{hom2}")
+
+        # Use your existing oligo conventions
+        spacer1 = rna1.replace('-', '')
+        df_dict['pegRNA Spacer Oligo Top'].append(('cacc' + spacer1) if spacer1 and spacer1[0] == 'G' else ('caccG' + spacer1))
+        df_dict['pegRNA Extension Oligo Top'].append('gtgc' + ext1)
+        df_dict['pegRNA Extension Oligo Bottom'].append('aaaa' + reverse_complement(ext1))
+
+        spacer2 = rna2.replace('-', '')
+        df_dict['ngRNA Annotation'].append('Second paired peg (Prime-Del)')
+        df_dict['ngRNA Oligo Top'].append(('cacc' + spacer2) if spacer2 and spacer2[0] == 'G' else ('caccG' + spacer2))
+        df_dict['ngRNA Oligo Bottom'].append('aaac' + reverse_complement(spacer2))
+
+        # Keep generic scoring/bystander fields blank (not part of this port)
+        df_dict['PAM'].append('NGG (assumed)')
+        df_dict['Off Target Score (Click To Toggle)'].append('')
+        df_dict['On Target Score (Click To Toggle)'].append('')
+        df_dict['Bystander Edits?'].append('')
+
+        # Extra explicit Prime-del columns
+        df_dict.setdefault('Prime-Del peg1 Spacer', []).append(rna1)
+        df_dict.setdefault('Prime-Del peg1 Extension (Homology+PBS)', []).append(ext1)
+        df_dict.setdefault('Prime-Del peg1 Nick', []).append(nick1)
+        df_dict.setdefault('Prime-Del peg2 Spacer', []).append(rna2)
+        df_dict.setdefault('Prime-Del peg2 Extension (Homology+PBS)', []).append(ext2)
+        df_dict.setdefault('Prime-Del peg2 Nick', []).append(nick2)
+        df_dict.setdefault('Prime-Del Deletion Size (bp)', []).append(int(dels))
+        df_dict.setdefault('Prime-Del Expected Product', []).append(expected)
+        df_dict.setdefault('Prime-Del Notes', []).append(note if note else '—')
+# ========= End Prime-del port ================================================
+
+
 
 def get_guides(ref_sequence_original, edited_sequence_original, PAM, edit_start=4, edit_end=9):
     print("in get guides")
@@ -778,7 +1004,7 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM, edit_start=
                                           edited_sequence_original, substitution_position, pam_sequence_list)
 
 
-
+        #OLD LOGIC
         '''
         if len(set(ref_sequence) - bases) == 0:
             substitution_position = identify_substitution_position(ref_sequence, edited_sequence)
