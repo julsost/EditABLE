@@ -1032,6 +1032,32 @@ def generate_integrase_visualization(guides_df, ref_sequence_input, substitution
     return integrase_visualization_elements
 
 
+def generate_prime_del_section(prime_editing_guides_df):
+    """
+    Generate a styled UI section for displaying Prime-Del pegRNAs and related info.
+    """
+    section_elements = []
+
+    section_elements.append(ui.header("Prime-Del pegRNAs Identified"))
+    section_elements.append(ui.text("These pegRNAs are optimized for deletions >80bp using Prime-Del technology."))
+
+    if prime_editing_guides_df.empty:
+        section_elements.append(ui.text("No pegRNAs available."))
+        return ui.container(section_elements)
+
+    # Iterate rows and display pegRNA info in consistent style
+    for _, row in prime_editing_guides_df.iterrows():
+        section_elements.append(
+            ui.card([
+                ui.text(f"**pegRNA ID:** {row.get('pegRNA ID', 'N/A')}"),
+                ui.text(f"**Sequence:** {row.get('pegRNA Sequence', 'N/A')}"),
+                ui.text(f"**PAM:** {row.get('PAM', 'N/A')}"),
+                ui.text(f"**Predicted Efficiency:** {row.get('Efficiency', 'N/A')}"),
+                ui.text(f"**Notes:** {row.get('Notes', '')}")
+            ])
+        )
+
+    return ui.container(section_elements)
 def parse_base_editing_window(window_str):
     start, end = map(int, window_str.split('-'))
     return start - 1, end  # Adjust for 0-based index
@@ -1620,7 +1646,11 @@ def server(input, output, session):
             ui_elements.append(generate_integrase_protocols_section(prime_editing_guides_df))
 
         if 'Deletion >80bp: Use Prime-Del' in guides_df['Editing Technology'].values:
-            ui_elements.append(generate_integrase_protocols_section(prime_editing_guides_df))
+            # This is where I want to output the pegrnas from prime-del and any other good info from the output, it should be formatted well and in the same style as the rest o the application
+            #This is just a placeholder
+            ui_elements.append(generate_prime_del_section(prime_editing_guides_df))
+
+
 
 
         ui_elements.append(ui.download_button("download_results", "Download Results as CSV File"))
