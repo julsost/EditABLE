@@ -600,8 +600,6 @@ def handle_insertions(ref_sequence, edited_sequence, df_dict, ref_sequence_origi
 
 
 
-
-
 # helper function to add insertions and deletions
 def add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original, editing_technology):
     df_dict['Original Sequence'].append(ref_sequence_original)
@@ -673,6 +671,7 @@ def render_dataframe(df_dict):
 
 
 def get_guides(ref_sequence_original, edited_sequence_original, PAM, edit_start=4, edit_end=9):
+    print("in get guides")
     def process_guide_rnas_for_pam(guide_rnas, sequences, ref_sequence_original, edited_sequence_original, df_dict,
                                    ref_sequence, edited_sequence, substitution_position, orientation, pam):
         if guide_rnas == "NO PAM":
@@ -749,20 +748,38 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM, edit_start=
                                      edited_sequence_original):
         print("Insertion Or Deletion")
         print("Reference Sequence:", ref_sequence)
+        if '-' not in ref_sequence:
+            print("deletion")
+            return handle_deletions(ref_sequence, edited_sequence, df_dict, ref_sequence_original,
+                                    edited_sequence_original)
         if '-' in ref_sequence:
             print("insertion")
             return handle_insertions(ref_sequence, edited_sequence, df_dict, ref_sequence_original,
                                      edited_sequence_original)
-        else:
-            print("deletion")
-            return handle_deletions(ref_sequence, edited_sequence, df_dict, ref_sequence_original,
-                                    edited_sequence_original)
 
     try:
         set_pam_sequences(PAM)
         ref_sequence, edited_sequence = create_mutable_sequences(ref_sequence_original, edited_sequence_original)
         df_dict = collections.defaultdict(list)
 
+        ref_has_indel = '-' in str(ref_sequence)
+        edited_has_indel = '-' in str(edited_sequence)
+
+        if ref_has_indel or edited_has_indel:
+            # insertion/deletion branch
+            df_dict = handle_insertion_or_deletion(ref_sequence, edited_sequence, df_dict,
+                                                   ref_sequence_original, edited_sequence_original)
+        else:
+            # single-base substitution (base-editing) branch
+            substitution_position = identify_substitution_position(ref_sequence, edited_sequence)
+            edit = f"{ref_sequence[substitution_position]}>{edited_sequence[substitution_position]}"
+            pam_sequence_list = [PAM, 'NGN', 'NRN', 'NYN']
+            df_dict = handle_base_editing(ref_sequence, edited_sequence, df_dict, ref_sequence_original,
+                                          edited_sequence_original, substitution_position, pam_sequence_list)
+
+
+
+        '''
         if len(set(ref_sequence) - bases) == 0:
             substitution_position = identify_substitution_position(ref_sequence, edited_sequence)
             edit = f"{ref_sequence[substitution_position]}>{edited_sequence[substitution_position]}"
@@ -772,6 +789,8 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM, edit_start=
         else:
             df_dict = handle_insertion_or_deletion(ref_sequence, edited_sequence, df_dict, ref_sequence_original,
                                                    edited_sequence_original)
+        '''
+
     except Exception as e:
         print(f"Error in get_guides: {e}")
         add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original,
