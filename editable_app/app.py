@@ -411,7 +411,7 @@ def create_twin_prime_editing_plasmid_card(guides_df, editor_info, editor_url):
         prime_card_elements.append(ui.br())
 
     # Add the recommended prime editing plasmid information
-    prime_card_elements.append(ui.help_text(f"Recommended Prime Editing Guide RNAs-BxbI integration step: {editor_info}"))
+    prime_card_elements.append(ui.help_text(f"Recommended Prime Editor Plasmid for creating BxbI integration site: {editor_info}"))
     prime_card_elements.append(ui.br())
     prime_card_elements.append(ui.br())
 
@@ -448,7 +448,7 @@ def create_integrase_plasmid_card(guides_df, editor_info, editor_url):
     )
 
 
-def generate_prime_protocals_section(guides_df):
+def generate_prime_protocols_section(guides_df):
     # Extract the oligos from the DataFrame
     pegRNA_oligo_top = guides_df["pegRNA Spacer Oligo Top"].tolist()
     pegRNA_oligo_extension_bottom = guides_df['pegRNA Extension Oligo Bottom'].tolist()
@@ -535,7 +535,7 @@ def generate_prime_protocals_section(guides_df):
 
     return ui_card("Experimental Validation of Prime Editing", 'prime_section', *prime_section)
 
-def generate_twin_prime_protocals_section(guides_df):
+def generate_twin_prime_protocols_section(guides_df):
     # Extract the oligos from the DataFrame
     pegRNA_oligo_top = guides_df["pegRNA Spacer Oligo Top"].tolist()
     pegRNA_oligo_extension_bottom = guides_df['pegRNA Extension Oligo Bottom'].tolist()
@@ -622,7 +622,7 @@ def generate_twin_prime_protocals_section(guides_df):
 
     return ui_card("Experimental Validation of Prime Editing-Bxb1 integration step", 'prime_section', *prime_section)
 
-def generate_integrase_protocals_section(guides_df):
+def generate_integrase_protocols_section(guides_df):
     integrase_section = [
         ui.help_text(
             ui.tags.b("Integrase-Mediated Insertion Workflow:", style="text-decoration: bold"),
@@ -730,7 +730,6 @@ def generate_experimental_validation_section(guides_df, pam_type):
     ])
 
     return ui_card("Experimental Validation of Base Editing Guide RNAs", 'validation_section', *validation_section)
-
 
 def generate_prime_editing_visualization(guides_df, ref_sequence_input, substitution_position, PAM):
     pegRNA_oligo_top = guides_df["pegRNA Spacer Oligo Top"].tolist()
@@ -1508,14 +1507,13 @@ def server(input, output, session):
 
             ui_elements.append(prime_editing_plasmid_card)
 
-
             ui_elements.append(ui_card(
-                "Visualization of Twin Prime Editing Guides",
+                "Visualization of Prime Editing Guides",
                 "prime_editing_visualization",
                 *generate_prime_editing_visualization(guides_df, ref_sequence_input, substitution_position, PAM)
             ))
 
-            ui_elements.append(generate_prime_protocals_section(prime_editing_guides_df))
+            ui_elements.append(generate_prime_protocols_section(prime_editing_guides_df))
 
 
         if 'Twin Prime Editing (Creating a Bxb1 Site)' in guides_df['Editing Technology'].values:
@@ -1528,7 +1526,7 @@ def server(input, output, session):
                 *generate_twin_prime_editing_visualization(guides_df, ref_sequence_input, substitution_position, PAM)
             ))
 
-            ui_elements.append(generate_twin_prime_protocals_section(prime_editing_guides_df))
+            ui_elements.append(generate_twin_prime_protocols_section(prime_editing_guides_df))
 
             integrase_plasmid_card = create_integrase_plasmid_card(guides_df, editor_info, editor_url)
             ui_elements.append(integrase_plasmid_card)
@@ -1540,8 +1538,7 @@ def server(input, output, session):
                 *generate_integrase_visualization(guides_df, ref_sequence_input, substitution_position, PAM)
             ))
     
-
-        ui_elements.append(generate_integrase_protocals_section(prime_editing_guides_df))
+            ui_elements.append(generate_integrase_protocols_section(prime_editing_guides_df))
 
 
         ui_elements.append(ui.download_button("download_results", "Download Results as CSV File"))
