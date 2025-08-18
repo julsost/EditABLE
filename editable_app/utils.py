@@ -18,6 +18,7 @@ pam_length = None
 PAMs = None
 reverse_PAMs = None
 
+print("hi")
 
 # helper function to find be guide rnas, pams, and 30 nt sequence
 def find_BE_guide_rnas(direction, seq, genomic_location, edit_start, edit_end):
@@ -519,78 +520,18 @@ def run_prime_design(ref_sequence, edited_sequence, substitution_position):
     primedesign_output = run_primedesign(str(primedesign_input))
     return primedesign_output
 
-
-# helper function to handle insertions: process cases where there are insertions.
-def handle_insertions(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original):
-    insertion_start = str(ref_sequence).find('-')
-    insertion_end = str(ref_sequence).rfind('-')
-    bxb1_site = 'GTCTGGTCAACCACCGCGGTCTCAGTGGTGTAC'
-
-    if insertion_end - insertion_start + 1 > 44:
-        print("Insertion length is greater than 44bp")
-
-        print('edited sequence:', edited_sequence)
-        print('insertions')
-        print(insertion_start, insertion_end)
-        print('ref_sequence:', ref_sequence)
-        print('bxb1_site:', bxb1_site)
-        modified_edited_sequence = ref_sequence[:insertion_start] + bxb1_site + ref_sequence[insertion_end + 1:]
-        primedesign_input = str(edited_sequence[:insertion_start] + f"(+{bxb1_site})" + edited_sequence[insertion_end + 1:]
-            )
-        print(modified_edited_sequence)
-        primedesign_output = run_primedesign(primedesign_input)
-
-        #This is the case that the seq is >44 and has  Recommended Guides
-        if primedesign_output != "No PrimeDesign Recommended Guides":
-            # If you change editing_tech name here, make sure to change in app.py as well
-            update_df_dict_with_primedesign_output(df_dict, ref_sequence_original, modified_edited_sequence,
-                                                   primedesign_output, "Twin Prime Editing (Creating a Bxb1 Site)")
-        #This is the case that the seq is >44 and has no Recommended Guides
-        else:
-            print("seq is >44 and has no Recommended Guides")
-            add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original,"No Guides, Other Method Required")
-
-    else:
-        print("less than 44")
-        primedesign_input = str(
-            ref_sequence[:insertion_start] + f"(+{edited_sequence[insertion_start: insertion_end + 1]})" + ref_sequence[
-                                                                                                           insertion_end + 1:])
-        primedesign_output = run_primedesign(primedesign_input)
-        if primedesign_output != "No PrimeDesign Recommended Guides":
-            update_df_dict_with_primedesign_output(df_dict, ref_sequence_original, edited_sequence_original,
-                                                   primedesign_output, "Prime Editing")
-        else:
-            print("less than 44, no guides")
-
-            modified_edited_sequence = edited_sequence[:insertion_start] + bxb1_site + edited_sequence[
-                                                                                       insertion_end + 1:]
-            primedesign_input = str(
-                ref_sequence[:insertion_start] + f"(+{bxb1_site})" + ref_sequence[insertion_end + 1:]
-                )
-
-            primedesign_output = run_primedesign(primedesign_input)
-            if primedesign_output != "No PrimeDesign Recommended Guides":
-                #If you change editing_tech name here, make sure to change in app.py as well
-                update_df_dict_with_primedesign_output(df_dict, ref_sequence_original, modified_edited_sequence,
-                                                       primedesign_output, "Twin Prime Editing (Creating a Bxb1 Site)")
-            # This is the case that the seq is <44 and has no Recommended Guides
-            else:
-                print("seq is <44 and has no Recommended Guides")
-                print(modified_edited_sequence)
-            add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original,
-                                           "No Guides, Other Method Required")
-
-    return df_dict
-
-
 # helper function to handle deletions: process cases where there are deletions.
 def handle_deletions(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original):
+    print("running deletions")
     deletion_start = str(edited_sequence).find('-')
     deletion_end = str(edited_sequence).rfind('-')
-    if deletion_start - deletion_end + 1 > 100:
+    if deletion_end - deletion_start + 1 > 80:
+        print("seq in >80")
         add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original,
-                                       "Use Twin Prime Editing/Integrase/HDR")
+                                       "Deletion >80bp: Use Prime-Del")
+
     else:
+        print("seq in <80bp")
         primedesign_input = str(
             ref_sequence[:deletion_start] + f"(-{ref_sequence[deletion_start: deletion_end + 1]})" + ref_sequence[
                                                                                                      deletion_end + 1:])
@@ -602,6 +543,63 @@ def handle_deletions(ref_sequence, edited_sequence, df_dict, ref_sequence_origin
             add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original,
                                            "Use Twin Prime Editing/Integrase/HDR")
     return df_dict
+
+# helper function to handle insertions: process cases where there are insertions.
+def handle_insertions(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original):
+    print("running insertions")
+    insertion_start = str(ref_sequence).find('-')
+    insertion_end = str(ref_sequence).rfind('-')
+    # 38 bp minimal Bxb1 attB site from https://pmc.ncbi.nlm.nih.gov/articles/PMC5464966/
+    bxb1_site = 'GGCTTGTCGACGACGGCGGTCTCCGTCGTCAGGATCAT'
+
+    if insertion_end - insertion_start + 1 > 44:
+        modified_edited_sequence = ref_sequence[:insertion_start] + bxb1_site + ref_sequence[insertion_end + 1:]
+        primedesign_input = str(edited_sequence[:insertion_start] + f"(+{bxb1_site})" + edited_sequence[insertion_end + 1:]
+            )
+        print(modified_edited_sequence)
+        primedesign_output = run_primedesign(primedesign_input)
+
+        #This is the case that the seq is >44 and has  Recommended Guides
+        if primedesign_output != "No PrimeDesign Recommended Guides":
+            # If you change editing_tech name here, make sure to change in app.py as well
+            update_df_dict_with_primedesign_output(df_dict, ref_sequence_original, modified_edited_sequence,
+                                                   primedesign_output, "Prime Editing (Creating a Bxb1 Site)")
+        #This is the case that the seq is >44 and has no Recommended Guides
+        else:
+            add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original,"No Guides, Other Method Required")
+
+    else:
+        primedesign_input = str(
+            ref_sequence[:insertion_start] + f"(+{edited_sequence[insertion_start: insertion_end + 1]})" + ref_sequence[
+                                                                                                           insertion_end + 1:])
+        primedesign_output = run_primedesign(primedesign_input)
+        if primedesign_output != "No PrimeDesign Recommended Guides":
+            update_df_dict_with_primedesign_output(df_dict, ref_sequence_original, edited_sequence_original,
+                                                   primedesign_output, "Prime Editing")
+        else:
+
+            modified_edited_sequence = edited_sequence[:insertion_start] + bxb1_site + edited_sequence[
+                                                                                       insertion_end + 1:]
+            primedesign_input = str(
+                ref_sequence[:insertion_start] + f"(+{bxb1_site})" + ref_sequence[insertion_end + 1:]
+                )
+
+            primedesign_output = run_primedesign(primedesign_input)
+            if primedesign_output != "No PrimeDesign Recommended Guides":
+                #If you change editing_tech name here, make sure to change in app.py as well
+                update_df_dict_with_primedesign_output(df_dict, ref_sequence_original, modified_edited_sequence,
+                                                       primedesign_output, "Prime Editing (Creating a Bxb1 Site)")
+            # This is the case that the seq is <44 and has no Recommended Guides
+            else:
+                print("seq is <44 and has no Recommended Guides")
+                print(modified_edited_sequence)
+            add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original,
+                                           "No Guides, Other Method Required")
+
+    return df_dict
+
+
+
 
 
 # helper function to add insertions and deletions
@@ -749,10 +747,14 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM, edit_start=
 
     def handle_insertion_or_deletion(ref_sequence, edited_sequence, df_dict, ref_sequence_original,
                                      edited_sequence_original):
+        print("Insertion Or Deletion")
+        print("Reference Sequence:", ref_sequence)
         if '-' in ref_sequence:
+            print("insertion")
             return handle_insertions(ref_sequence, edited_sequence, df_dict, ref_sequence_original,
                                      edited_sequence_original)
         else:
+            print("deletion")
             return handle_deletions(ref_sequence, edited_sequence, df_dict, ref_sequence_original,
                                     edited_sequence_original)
 
@@ -1568,6 +1570,7 @@ def run_primedesign(input_sequence):
 
             # Find recommended ngRNA
             df_ngs = df[(df['type'] == 'ngRNA') & (df['pegRNA group'] == pegrna_group)]
+            df_ngs = df_ngs.copy()
             df_ngs['optimal_distance'] = abs(abs(df_ngs['nick-to-peg distance']) - 75)  # optimal ngRNA +/- 75 bp away
             df_ngs = df_ngs.sort_values(['annotation', 'optimal_distance'], ascending=[False, True])  # prioritize PE3b
 
