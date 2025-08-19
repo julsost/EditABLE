@@ -591,7 +591,7 @@ def handle_deletions(ref_sequence, edited_sequence, df_dict, ref_sequence_origin
             )
 
 
-        #add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original,"Deletion >80bp: Use Prime-Del")
+        add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original,"Deletion >80bp: Use Prime-Del")
 
     return df_dict
 

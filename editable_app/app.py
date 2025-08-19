@@ -338,6 +338,25 @@ def check_ref_edited_pair(ref_sequence, edited_sequence, edit_start=4, edit_end=
                 return False, f"There must be at least 25 base pairs of sequence after the desired edit. {len(ref_sequence) - 1 - current_dash_position} base pairs were found after your edit."
     return True, "Inputs verified. Proceed to get guides."
 
+#PLASMID CARDS
+
+def create_prime_del_plasmid_card(guides_df, editor_info, editor_url):
+    return ui_card(
+        "Suggested Addgene Plasmids for Prime-DEL",
+        "integrase_only_card",
+        ui.help_text("PE2 prime editor plasmid"),
+        ui.br(),
+        ui.br(),
+        ui.div(
+            {"class": "d-flex gap-2"},
+            ui.tags.a(
+                "pEF_PE2",
+                href="http://n2t.net/addgene:199267",
+                target="_blank",
+                class_="btn btn-primary"
+            ),
+        )
+    )
 
 def create_prime_editing_plasmid_card(guides_df, editor_info, editor_url):
     pegRNA_oligo_top = guides_df["pegRNA Spacer Oligo Top"].tolist()
@@ -456,8 +475,9 @@ def create_integrase_plasmid_card(guides_df, editor_info, editor_url):
             ),
         )
     )
+#-------------------------------------------------------------------------------------
 
-
+#PROTOCOL/VALIDATION SECTIONS
 def generate_prime_protocols_section(guides_df):
     # Extract the oligos from the DataFrame
     pegRNA_oligo_top = guides_df["pegRNA Spacer Oligo Top"].tolist()
@@ -544,7 +564,6 @@ def generate_prime_protocols_section(guides_df):
     prime_section.append(ui.br())
 
     return ui_card("Experimental Validation of Prime Editing", 'prime_section', *prime_section)
-
 def generate_twin_prime_protocols_section(guides_df):
     # Extract the oligos from the DataFrame
     pegRNA_oligo_top = guides_df["pegRNA Spacer Oligo Top"].tolist()
@@ -631,7 +650,6 @@ def generate_twin_prime_protocols_section(guides_df):
     prime_section.append(ui.br())
 
     return ui_card("Experimental Validation of Prime Editing-Bxb1 integration step", 'prime_section', *prime_section)
-
 def generate_integrase_protocols_section(guides_df):
     integrase_section = [
         ui.help_text(
@@ -702,6 +720,64 @@ def generate_integrase_protocols_section(guides_df):
 
     return ui_card("Detailed Bxb1 Integrase-Mediated Insertion Protocol", 'integrase_protocol_section', *integrase_section)
 
+def generate_prime_del_protocols_section(guides_df):
+    prime_del_section = [
+        ui.help_text(
+            ui.tags.b("PRIME-del Workflow:", style="text-decoration: bold"),
+            ui.br(),
+
+            # Components to Order
+            ui.tags.span("Components to Order:"),
+            ui.br(),
+            ui.tags.ul(
+                ui.tags.li("PE2 Prime Editor plasmid (Addgene #132775 or #199267)"),
+                ui.tags.li("Paired pegRNAs (custom designed or Addgene pegRNA backbones such as #172657, #172658)"),
+            ),
+            ui.br(),
+
+            # Step 1
+            ui.tags.span("Step 1: Cell Culture and Transfection"),
+            ui.br(),
+            ui.tags.ul(
+                ui.tags.li(
+                    "Plate cells (e.g., HEK293T, U2OS, or your target line) 24 hrs before transfection to reach ~70% confluency."),
+                ui.tags.li("Transfect cells with:"),
+                ui.tags.ul(
+                    ui.tags.li("PE2 plasmid: 1–2 µg per well in a 6-well plate"),
+                    ui.tags.li("Paired pegRNA plasmid(s): 0.5–1 µg each"),
+                ),
+                ui.tags.li("Use Lipofectamine 3000 (ThermoFisher) or electroporation for harder-to-transfect cells."),
+                ui.tags.li("Include a control well (PE2 + no pegRNAs)."),
+            ),
+            ui.br(),
+
+            # Step 4
+            ui.tags.span("Step 4: Expression and Editing"),
+            ui.br(),
+            ui.tags.ul(
+                ui.tags.li("Incubate cells for 72–96 hours to allow editing."),
+                ui.tags.li("For difficult loci, extend incubation up to 7 days."),
+                ui.tags.li("For stable expression, consider lentiviral delivery of pegRNAs."),
+            ),
+            ui.br(),
+
+            # Step 5
+            ui.tags.span("Step 5: Harvest and DNA Analysis"),
+            ui.br(),
+            ui.tags.ul(
+                ui.tags.li("Extract genomic DNA from cells."),
+                ui.tags.li("PCR across the target locus using primers flanking the expected deletion."),
+                ui.tags.li("Run PCR products on agarose gel: deletion allele runs smaller than wild-type."),
+                ui.tags.li("Sequence PCR products (Sanger or NGS) to confirm precise deletion junction."),
+            ),
+            ui.br(),
+            ui.br(),
+        )
+    ]
+
+    return ui_card("PRIME-del Protocol", 'prime_del_protocol_section', prime_del_section)
+
+
 def generate_donor_protocols_section(guides_df):
     integrase_section = [
         ui.help_text(
@@ -769,10 +845,6 @@ def generate_donor_protocols_section(guides_df):
 
     return ui_card("Donor Plasmid Construction (Insert + attP)", 'integrase_protocol_section',
                    *integrase_section)
-
-
-
-
 def generate_experimental_validation_section(guides_df, pam_type):
     # Extract the guide RNAs from the DataFrame
     guide_rnas = guides_df["Base Editing Guide"].tolist()
@@ -809,6 +881,39 @@ def generate_experimental_validation_section(guides_df, pam_type):
     ])
 
     return ui_card("Experimental Validation of Base Editing Guide RNAs", 'validation_section', *validation_section)
+
+#-------------------------------------------------------------------------------------
+#VISUALIZATION
+
+def generate_prime_del_visualization(guides_df, ref_sequence_input, substitution_position, PAM):
+
+    prime_del_visualization_elements = []
+    # Add the introductory text with colored formatting
+    intro_text = ui.help_text(
+        "This section visualizes PRIME-Del (paired prime editing). ",
+        "The ", ui.tags.b("red", style="color: red;"), " and ",
+        ui.tags.b("blue", style="color: blue;"),
+        " segments simply distinguish the 3′ DNA flaps synthesized from each pegRNA’s RT template—the two ends that will be joined. ",
+        "The dotted region marks the DNA segment programmed for deletion. ",
+        "Steps shown: nick by PE2 (Cas9 H840A), reverse transcription to form 3′ flaps, and DNA repair to create a precise deletion (optionally with a short, encoded insert)."
+    )
+
+
+
+    # Center the image
+
+    prime_del_visualization_elements.append(intro_text)
+    prime_del_visualization_elements.append(ui.br())
+    prime_del_visualization_elements.append(ui.br())
+    prime_del_visualization_elements.append(
+        ui.div(
+            ui.output_image("prime_del_visualization_image"),
+            {"style": "text-align: center;"}
+        )
+    )
+    prime_del_visualization_elements.append(ui.br())
+
+    return prime_del_visualization_elements
 
 def generate_prime_editing_visualization(guides_df, ref_sequence_input, substitution_position, PAM):
     pegRNA_oligo_top = guides_df["pegRNA Spacer Oligo Top"].tolist()
@@ -1036,6 +1141,10 @@ def generate_integrase_visualization(guides_df, ref_sequence_input, substitution
     return integrase_visualization_elements
 
 
+
+
+
+
 def generate_prime_del_section(prime_editing_guides_df):
     """
     Generate a styled UI section for displaying Prime-Del pegRNAs and related info.
@@ -1210,6 +1319,12 @@ def server(input, output, session):
     @render.image
     def prime_visualization_image():
         img: ImgData = {"src": str(Path(__file__).parent / "prime_editing_diagram.png"), "width": "500px"}
+        return img
+
+    @output
+    @render.image
+    def prime_del_visualization_image():
+        img: ImgData = {"src": str(Path(__file__).parent / "Prime_del_diagram.png"), "height": "450px"}
         return img
 
     @output
@@ -1653,9 +1768,15 @@ def server(input, output, session):
         if 'Deletion >80bp: Use Prime-Del' in guides_df['Editing Technology'].values:
             # This is where I want to output the pegrnas from prime-del and any other good info from the output, it should be formatted well and in the same style as the rest o the application
             #This is just a placeholder
-            ui_elements.append(generate_prime_del_section(prime_editing_guides_df))
+            prime_del_plasmid_card = create_prime_del_plasmid_card(guides_df, editor_info, editor_url)
+            ui_elements.append(prime_del_plasmid_card)
+            ui_elements.append(ui_card(
+                "Visualization of BxbI Integrase Step",
+                "prime_editing_visualization",
+                *generate_prime_del_visualization(guides_df, ref_sequence_input, substitution_position, PAM)
+            ))
 
-
+            ui_elements.append(generate_prime_del_protocols_section(twin_prime_editing_guides_df))
 
 
         ui_elements.append(ui.download_button("download_results", "Download Results as CSV File"))
