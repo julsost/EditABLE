@@ -540,6 +540,7 @@ def handle_deletions(ref_sequence, edited_sequence, df_dict, ref_sequence_origin
             update_df_dict_with_primedesign_output(df_dict, ref_sequence_original, edited_sequence_original,
                                                    primedesign_output, "Prime Editing")
         else:
+            print("seq >80")
             add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original,
                                            "Use Twin Prime Editing/Integrase/HDR")
             pass
@@ -551,7 +552,7 @@ def handle_deletions(ref_sequence, edited_sequence, df_dict, ref_sequence_origin
             # design paired pegs with tight (precise) windows first
             pdel_pairs = _pdel_design_by_start_end(
                 seq=str(ref_sequence_original),
-                start=deletion_idx,
+                start=deletion_start,
                 end=deletion_end,
                 homology_length=30,  # default homology used by the published script
                 precise=True  # try exact endpoints first
@@ -561,7 +562,7 @@ def handle_deletions(ref_sequence, edited_sequence, df_dict, ref_sequence_origin
                 # if nothing precise is found, relax to ±50bp windows (Prime-del fallback)
                 pdel_pairs = _pdel_design_by_start_end(
                     seq=str(ref_sequence_original),
-                    start=deletion_idx,
+                    start=deletion_start,
                     end=deletion_end,
                     homology_length=30,
                     precise=False
