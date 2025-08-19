@@ -567,6 +567,7 @@ def generate_twin_prime_protocols_section(guides_df):
     # Process and add pegRNA oligos if they are present and valid
     if pegRNA_oligo_top and any(pegRNA_oligo_top):
         processed_pegRNA_oligos = process_peg_rnas(pegRNA_oligo_top, pegRNA_oligo_extension_bottom)
+        print("processed_pegRNA_oligos")
         if processed_pegRNA_oligos:
             for guide_rna in processed_pegRNA_oligos:
                 guide_rna_parts = guide_rna.split('\n')
@@ -574,7 +575,6 @@ def generate_twin_prime_protocols_section(guides_df):
                     prime_section.append(ui.help_text(part))
                     prime_section.append(ui.br())
                 prime_section.append(ui.br())
-
     prime_section.extend([
         ui.help_text(
             ui.tags.span("2. Digest geneBlock using "),
@@ -910,13 +910,16 @@ def generate_twin_prime_editing_visualization(guides_df, ref_sequence_input, sub
     pegRNA_oligo_top = guides_df["pegRNA Spacer Oligo Top"].tolist()
     pegRNA_oligo_extension_bottom = guides_df['pegRNA Extension Oligo Bottom'].tolist()
     ngRNA_oligos = guides_df["ngRNA Oligo Top"].tolist()
+    print("pegRNA_oligo_top", pegRNA_oligo_top)
+    print("pegRNA_oligo_extension_bottom", pegRNA_oligo_extension_bottom)
+
 
     processed_pegRNA_oligos = visualization_peg_rnas(pegRNA_oligo_top,
                                                      pegRNA_oligo_extension_bottom) if pegRNA_oligo_top and any(
         pegRNA_oligo_top) else None
     processed_ngRNA_oligos = visualization_ng_rnas(ngRNA_oligos) if ngRNA_oligos and any(ngRNA_oligos) and ngRNA_oligos[
         0] != 'n/a' else None
-
+    print("processed_pegRNA_oligos", processed_pegRNA_oligos)
     prime_visualization_elements = []
     # Add the introductory text with colored formatting
     intro_text = ui.help_text(
@@ -969,6 +972,7 @@ def generate_twin_prime_editing_visualization(guides_df, ref_sequence_input, sub
             prime_visualization_elements.append(ui.help_text(f"pegRNA:"))
             prime_visualization_elements.append(ui.br())
             prime_visualization_elements.append(complete_guide_text)
+            print("complete_guide_text", complete_guide_text)
             prime_visualization_elements.append(ui.br())
             prime_visualization_elements.append(ui.br())
 
@@ -1458,6 +1462,7 @@ def server(input, output, session):
 
         base_editing_guides_df = guides_df[guides_df['Editing Technology'] == 'Base Editing']
         prime_editing_guides_df = guides_df[guides_df['Editing Technology'] == 'Prime Editing']
+        twin_prime_editing_guides_df = guides_df[guides_df['Editing Technology'] == 'Prime Editing (Creating a Bxb1 Site)']
         filtered_guides_df = to_display_guides_df[
             to_display_guides_df['Editing Technology'].isin(['Base Editing', 'Prime Editing'])]
 
@@ -1621,21 +1626,21 @@ def server(input, output, session):
             ui_elements.append(generate_prime_protocols_section(prime_editing_guides_df))
 
         if 'Prime Editing (Creating a Bxb1 Site)' in guides_df['Editing Technology'].values:
-            twin_prime_editing_plasmid_card = create_twin_prime_editing_plasmid_card(guides_df, editor_info, editor_url)
-            ui_elements.append(twin_prime_editing_plasmid_card)
-
+            twin_prime_editing_plasmid_card = create_twin_prime_editing_plasmid_card(twin_prime_editing_guides_df,
+                                                                                     editor_info, editor_url)
             ui_elements.append(ui_card(
                 "Visualization of Prime Editing Guides - Creating BxbI Integration site",
                 "prime_editing_visualization",
-                *generate_twin_prime_editing_visualization(guides_df, ref_sequence_input, substitution_position, PAM)
+                *generate_twin_prime_editing_visualization(twin_prime_editing_guides_df, ref_sequence_input,
+                                                           substitution_position, PAM)
             ))
+            ui_elements.append(generate_twin_prime_protocols_section(twin_prime_editing_guides_df))
 
-            ui_elements.append(generate_twin_prime_protocols_section(prime_editing_guides_df))
 
             integrase_plasmid_card = create_integrase_plasmid_card(guides_df, editor_info, editor_url)
             ui_elements.append(integrase_plasmid_card)
 
-            ui_elements.append(generate_donor_protocols_section(prime_editing_guides_df))
+            ui_elements.append(generate_donor_protocols_section(twin_prime_editing_guides_df))
 
             ui_elements.append(ui_card(
                 "Visualization of BxbI Integrase Step",
@@ -1643,7 +1648,7 @@ def server(input, output, session):
                 *generate_integrase_visualization(guides_df, ref_sequence_input, substitution_position, PAM)
             ))
     
-            ui_elements.append(generate_integrase_protocols_section(prime_editing_guides_df))
+            ui_elements.append(generate_integrase_protocols_section(twin_prime_editing_guides_df))
 
         if 'Deletion >80bp: Use Prime-Del' in guides_df['Editing Technology'].values:
             # This is where I want to output the pegrnas from prime-del and any other good info from the output, it should be formatted well and in the same style as the rest o the application
