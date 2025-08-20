@@ -1688,11 +1688,15 @@ def server(input, output, session):
                 "."
             )
 
-            # ✅ just make it a plain button instead of input_action_button
-            explore_button = ui.tags.button(
-                "Explore on PrimeDesign",
-                id="toggle_prime",
-                style="margin:10px; padding:6px 12px; border-radius:4px;"
+
+            explore_button = ui.div(
+                ui.tags.button(
+                    "Explore on PrimeDesign",
+                    id="toggle_prime",
+                    class_="btn btn-outline-primary",  # light blue
+                    style="margin:10px;"
+                ),
+                style="text-align:left;"
             )
 
             prime_iframe = ui.div(
@@ -1705,7 +1709,6 @@ def server(input, output, session):
                 )
             )
 
-            # ✅ simple JS toggle on button click
             toggle_script = ui.tags.script("""
               document.addEventListener("click", function(e) {
                 if (e.target && e.target.id === "toggle_prime") {
@@ -1721,22 +1724,22 @@ def server(input, output, session):
               });
             """)
 
-            # Append
-            ui_elements.append(help_text)
-            ui_elements.append(explore_button)
-            ui_elements.append(prime_iframe)
-            ui_elements.append(toggle_script)
 
 
-        # Append the card to the UI elements
-        ui_elements.append(ui_card(
-            guide_title,
-            'guides_df',
-            help_text,
-            ui.br(),
-            ui.br(),
-            ui.output_data_frame("render_results")
-        ))
+            ui_elements.append(
+                ui_card(
+                    guide_title,
+                    'guides_df',
+                    help_text,
+                    ui.br(),
+                    explore_button,  # 👈 now directly under the note
+                    ui.br(),
+                    prime_iframe,  # iframe is hidden until toggled
+                    toggle_script,
+                    ui.output_data_frame("render_results")
+                )
+            )
+
 
         if 'Base Editing' in filtered_guides_df['Editing Technology'].values:
             ui_elements.append(
