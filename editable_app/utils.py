@@ -879,9 +879,9 @@ def _pdel_update_df_dict(df_dict: dict, ref_sequence_original: str, edited_seque
 
         # Keep generic scoring/bystander fields blank (not part of this port)
         df_dict['PAM'].append('NGG (assumed)')
-        df_dict['Off Target Score (Click To Toggle)'].append('')
-        df_dict['On Target Score (Click To Toggle)'].append('')
-        df_dict['Bystander Edits?'].append('')
+        #df_dict['Off Target Score (Click To Toggle)'].append('')
+        #df_dict['On Target Score (Click To Toggle)'].append('')
+        #df_dict['Bystander Edits?'].append('')
 
         # Extra explicit Prime-del columns
         df_dict.setdefault('Prime-Del peg1 Spacer', []).append(rna1)
@@ -937,10 +937,10 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM, edit_start=
                 df_dict['Base Editing Guide'].append(str(gRNA))
                 df_dict['Base Editing Guide Orientation'].append(orientation)
                 df_dict['PAM'].append(pam)
-                df_dict['Off Target Score (Click To Toggle)'].append(cfd_score)
-                df_dict['On Target Score (Click To Toggle)'].append(on_score)
+                #df_dict['Off Target Score (Click To Toggle)'].append(cfd_score)
+                #df_dict['On Target Score (Click To Toggle)'].append(on_score)
                 # df_dict['RuleSet3 Score'].append(rs3)
-                df_dict['Bystander Edits?'].append(position_info)
+                #df_dict['Bystander Edits?'].append(position_info)
                 df_dict['pegRNA Annotation'].append(None)
                 df_dict['pegRNA PBS'].append(None)
                 df_dict['pegRNA RTT'].append(None)
