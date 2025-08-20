@@ -908,7 +908,9 @@ def generate_prime_del_visualization(guides_df, ref_sequence_input, substitution
     prime_del_visualization_elements.append(
         ui.div(
             ui.output_image("prime_del_visualization_image"),
-            {"style": "text-align: center;"}
+            {
+                "style": "text-align: center; min-height: 0;"
+            }
         )
     )
     prime_del_visualization_elements.append(ui.br())
@@ -1318,13 +1320,13 @@ def server(input, output, session):
     @output
     @render.image
     def prime_visualization_image():
-        img: ImgData = {"src": str(Path(__file__).parent / "prime_editing_diagram.png"), "width": "500px"}
+        img: ImgData = {"src": str(Path(__file__).parent / "prime_editing_diagram.png"), "width": "100%"}
         return img
 
     @output
     @render.image
     def prime_del_visualization_image():
-        img: ImgData = {"src": str(Path(__file__).parent / "Prime_del_diagram.png"), "height": "450px"}
+        img: ImgData = {"src": str(Path(__file__).parent / "Prime_del_diagram.png"), "style": "max-width: 100%; height: auto;"}
         return img
 
     @output
