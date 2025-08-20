@@ -1670,6 +1670,35 @@ def server(input, output, session):
                           {'href': 'https://pubmed.ncbi.nlm.nih.gov/25184501/', 'target': '_blank'}),
                 ui.tags.b(" A higher score is better for both algorithms.", style="text-decoration: bold")
             )
+        elif any(col.startswith("Prime-Del ") for col in guides_df.columns):
+            guide_title = "Recommended PRIME-DelpegRNA sequences"
+            help_text = ui.help_text("Note: PRIME-Del is a genome editing method based on prime "
+                                     "editing that facilitates the precise deletion of DNA sequences. "       
+                                    "We use the Shendure Labs's algorithm with default parameters, "
+                                    "to identify the single most optimal prime editing guide RNAs. For more advanced usage "
+                                    "please visit the ",
+                                    ui.tags.a(
+                                        "Shendure Labs's PRIME-Del portal",
+                                        {"href": "https://shendurelab.github.io/Prime-del/", "target": "_blank"}
+                                    ),
+                                    " or see the original publication ",
+                                    ui.tags.a(
+                                        "(Choi, J., et al. 2021 Nat Biotech)",
+                                        {"href": "https://www.nature.com/articles/s41587-021-01025-z", "target": "_blank"}
+                                    ),
+                                     "."
+                                     )
+            ui_elements.append(
+                ui_card(
+                    guide_title,
+                    'guides_df',
+                    help_text,
+                    ui.br(),
+                    ui.output_data_frame("render_results")
+                )
+            )
+
+
         else:
             guide_title = "Recommended Prime Editing Guide RNAs"
             help_text = ui.help_text(
