@@ -730,7 +730,7 @@ def generate_prime_del_protocols_section(guides_df):
             ui.tags.span("Components to Order:"),
             ui.br(),
             ui.tags.ul(
-                ui.tags.li("PE2 Prime Editor plasmid (Addgene #132775 or #199267)"),
+                ui.tags.li("PE2 Prime Editor plasmid (Addgene #199267)"),
                 ui.tags.li("Paired pegRNAs (custom designed or Addgene pegRNA backbones such as #172657, #172658)"),
             ),
             ui.br(),
@@ -1625,7 +1625,8 @@ def server(input, output, session):
             filename=lambda: f"guides-{date.today().isoformat()}-{datetime.now().strftime('%H-%M-%S')}.csv"
         )
         def download_results():
-            return generate_csv_download()
+            nonlocal guides_df
+            yield guides_df.to_csv(index=False)
 
         substitution_position = None
         for i in range(len(ref_sequence_input)):
@@ -1765,7 +1766,7 @@ def server(input, output, session):
     
             ui_elements.append(generate_integrase_protocols_section(twin_prime_editing_guides_df))
 
-        if 'Deletion >80bp: Use Prime-Del' in guides_df['Editing Technology'].values:
+        if 'Deletion >80bp: Use Prime-Del' in guides_df['Editing Technology'].values or any(col.startswith('Prime-Del ') for col in guides_df.columns):
             # This is where I want to output the pegrnas from prime-del and any other good info from the output, it should be formatted well and in the same style as the rest o the application
             #This is just a placeholder
             prime_del_plasmid_card = create_prime_del_plasmid_card(guides_df, editor_info, editor_url)
