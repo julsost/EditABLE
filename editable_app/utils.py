@@ -590,8 +590,9 @@ def handle_deletions(ref_sequence, edited_sequence, df_dict, ref_sequence_origin
                 "Prime-Del: Unexpected error while designing paired pegs"
             )
 
+        #guides_df.loc[guides_df.index[0], "Editing Technology"] = "Deletion >80bp: Use Prime-Del"
 
-        add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original,"Deletion >80bp: Use Prime-Del")
+        #add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original,"Deletion >80bp: Use Prime-Del")
 
     return df_dict
 
@@ -644,8 +645,7 @@ def handle_insertions(ref_sequence, edited_sequence, df_dict, ref_sequence_origi
             else:
                 print("seq is <44 and has no Recommended Guides")
                 print(modified_edited_sequence)
-            add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original,
-                                           "No Guides, Other Method Required")
+            add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original,"No Guides, Other Method Required")
 
     return df_dict
 
