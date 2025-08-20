@@ -728,22 +728,9 @@ def _pdel_reverse_complement(seq: str) -> str:
     # Use your existing util to keep behavior identical everywhere
     return reverse_complement(seq)
 
-def _pdel_gen_guides(seq: str):
-    """
-    Generate NGG-spaced 20nt spacers with nick positions as in Prime-del:
-      - FWD nick = spacer start + 17
-      - REV nick = match start + 6 (spacer is RC of seq[m.start()+3:m.start()+23])
-    Works with Python's built-in 're' (no 'overlapped' flag).
-    """
-    # Forward: 21 nts + 'GG' PAM (we take the first 20 as the spacer)
-    fwd = [(seq[m.start():m.start()+20], m.start()+17)
-           for m in re.finditer(r"(?=(?:[ACGT]{21}GG))", seq)]
-    # Reverse: 'CC' PAM on the forward strand + 21 nts (peg spacer is RC of [m+3:m+23])
-    rev = [(reverse_complement(seq[m.start()+3:m.start()+23]), m.start()+6)
-           for m in re.finditer(r"(?=(?:CC[ACGT]{21}))", seq)]
-    return fwd, rev
 
 def _pdel_gen_guides(seq: str):
+    seq = seq.upper()  # <-- add this
     """
     Generate NGG-spaced 20nt spacers with nick positions as in Prime-del:
       - FWD nick = spacer start + 17
@@ -804,7 +791,7 @@ def _pdel_gen_pegpair(g1, g2, seq: str, homology_len: int, precise: bool=False, 
         expected
     )
 
-def _pdel_design_by_start_end(seq: str, start: int, end: int, homology_length: int=30, precise: bool=True):
+def _pdel_design_by_start_end(seq: str, start: int, end: int, homology_length: int=30, precise: bool=False):
     """
     Wraps Prime-del's peg_design_by_start_end for a single sequence.
     - precise=True: only return pairs whose nick sites are within ~[-20,+2..3] around start/end,
@@ -841,58 +828,35 @@ def _pdel_design_by_start_end(seq: str, start: int, end: int, homology_length: i
         return pairs  # fall back to list if numpy is unhappy
 
 def _pdel_update_df_dict(df_dict: dict, ref_sequence_original: str, edited_sequence_original: str, pairs, max_rows: int=50):
-    """
-    Append Prime-del results to your unified df_dict in a way that reuses existing
-    columns but also adds a few “Prime-Del …” columns that render nicely in your table.
-    """
-    def _split_ext(ext: str):
-        pbs = ext[-13:]
-        hom = ext[:-13]
-        return hom, pbs
-
     n = min(max_rows, len(pairs))
     for i in range(n):
         (rna1, ext1, nick1, rna2, ext2, nick2, note, dels, expected) = pairs[i]
-        hom1, pbs1 = _split_ext(ext1)
-        hom2, pbs2 = _split_ext(ext2)
 
-        # Reuse your standard columns so the row shows up everywhere as usual
+        # Ensure the df_dict keys exist before appending
+        for k in [
+            'Original Sequence', 'Desired Sequence', 'Editing Technology',
+            'Prime-Del peg1 Spacer', 'Prime-Del peg1 Extension (Homology+PBS)', 'Prime-Del peg1 Nick',
+            'Prime-Del peg2 Spacer', 'Prime-Del peg2 Extension (Homology+PBS)', 'Prime-Del peg2 Nick',
+            'Prime-Del Deletion Size (bp)', 'Prime-Del Expected Product', 'Prime-Del Notes'
+        ]:
+            df_dict.setdefault(k, [])
+
+        # Required Prime-del output columns
         df_dict['Original Sequence'].append(ref_sequence_original)
         df_dict['Desired Sequence'].append(edited_sequence_original)
         df_dict['Editing Technology'].append('Prime-Del')
 
-        # The “prime editing” columns can carry useful bits for Prime-del too
-        df_dict['pegRNA Annotation'].append(f"Prime-Del pair (exact delete {dels}bp). Notes: {note if note else '—'}")
-        df_dict['pegRNA PBS'].append(f"peg1:{pbs1} | peg2:{pbs2}")
-        df_dict['pegRNA RTT'].append(f"peg1-homology:{hom1} | peg2-homology:{hom2}")
+        df_dict['Prime-Del peg1 Spacer'].append(rna1)
+        df_dict['Prime-Del peg1 Extension (Homology+PBS)'].append(ext1)
+        df_dict['Prime-Del peg1 Nick'].append(nick1)
 
-        # Use your existing oligo conventions
-        spacer1 = rna1.replace('-', '')
-        df_dict['pegRNA Spacer Oligo Top'].append(('cacc' + spacer1) if spacer1 and spacer1[0] == 'G' else ('caccG' + spacer1))
-        df_dict['pegRNA Extension Oligo Top'].append('gtgc' + ext1)
-        df_dict['pegRNA Extension Oligo Bottom'].append('aaaa' + reverse_complement(ext1))
+        df_dict['Prime-Del peg2 Spacer'].append(rna2)
+        df_dict['Prime-Del peg2 Extension (Homology+PBS)'].append(ext2)
+        df_dict['Prime-Del peg2 Nick'].append(nick2)
 
-        spacer2 = rna2.replace('-', '')
-        df_dict['ngRNA Annotation'].append('Second paired peg (Prime-Del)')
-        df_dict['ngRNA Oligo Top'].append(('cacc' + spacer2) if spacer2 and spacer2[0] == 'G' else ('caccG' + spacer2))
-        df_dict['ngRNA Oligo Bottom'].append('aaac' + reverse_complement(spacer2))
-
-        # Keep generic scoring/bystander fields blank (not part of this port)
-        df_dict['PAM'].append('NGG (assumed)')
-        #df_dict['Off Target Score (Click To Toggle)'].append('')
-        #df_dict['On Target Score (Click To Toggle)'].append('')
-        #df_dict['Bystander Edits?'].append('')
-
-        # Extra explicit Prime-del columns
-        df_dict.setdefault('Prime-Del peg1 Spacer', []).append(rna1)
-        df_dict.setdefault('Prime-Del peg1 Extension (Homology+PBS)', []).append(ext1)
-        df_dict.setdefault('Prime-Del peg1 Nick', []).append(nick1)
-        df_dict.setdefault('Prime-Del peg2 Spacer', []).append(rna2)
-        df_dict.setdefault('Prime-Del peg2 Extension (Homology+PBS)', []).append(ext2)
-        df_dict.setdefault('Prime-Del peg2 Nick', []).append(nick2)
-        df_dict.setdefault('Prime-Del Deletion Size (bp)', []).append(int(dels))
-        df_dict.setdefault('Prime-Del Expected Product', []).append(expected)
-        df_dict.setdefault('Prime-Del Notes', []).append(note if note else '—')
+        df_dict['Prime-Del Deletion Size (bp)'].append(int(dels))
+        df_dict['Prime-Del Expected Product'].append(expected)
+        df_dict['Prime-Del Notes'].append(note if note else '—')
 # ========= End Prime-del port ================================================
 
 

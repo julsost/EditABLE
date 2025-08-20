@@ -1320,7 +1320,7 @@ def server(input, output, session):
     @output
     @render.image
     def prime_visualization_image():
-        img: ImgData = {"src": str(Path(__file__).parent / "prime_editing_diagram.png"), "width": "100%"}
+        img: ImgData = {"src": str(Path(__file__).parent / "prime_editing_diagram.png"), "width": "500px"}
         return img
 
     @output
@@ -1518,7 +1518,11 @@ def server(input, output, session):
                 counter += 1
 
         to_display_guides_df = pd.concat(dfs_to_merge_display)
-        to_display_guides_df = to_display_guides_df.drop(columns=['Original Sequence', 'Desired Sequence'])
+
+        cols_to_drop = [c for c in ['Original Sequence', 'Desired Sequence'] if c in to_display_guides_df.columns]
+        if cols_to_drop:
+            to_display_guides_df = to_display_guides_df.drop(columns=cols_to_drop)
+
         guides_df = pd.concat(dfs_to_merge_download)
 
         ui_elements = [
@@ -1669,13 +1673,60 @@ def server(input, output, session):
         else:
             guide_title = "Recommended Prime Editing Guide RNAs"
             help_text = ui.help_text(
-                '''Note: We use the PrimeDesign algorithm with default parameters (including NGG PAM), to identify the single most optimal prime editing guide RNA. For more advanced usage please visit the ''',
-                ui.tags.a('PrimeDesign portal', {'href': 'https://primedesign-dash.onrender.com/', 'target': '_blank'}),
-                ''' or see the original publication ''',
-                ui.tags.a('(Hsu et al. 2021 Nat Commun)',
-                          {'href': 'https://pubmed.ncbi.nlm.nih.gov/33589617/', 'target': '_blank'}),
-                '''.'''
+                "Note: We use the PrimeDesign algorithm with default parameters (including NGG PAM), "
+                "to identify the single most optimal prime editing guide RNA. For more advanced usage "
+                "please visit the ",
+                ui.tags.a(
+                    "PrimeDesign portal",
+                    {"href": "https://primedesign-dash.onrender.com/", "target": "_blank"}
+                ),
+                " or see the original publication ",
+                ui.tags.a(
+                    "(Hsu et al. 2021 Nat Commun)",
+                    {"href": "https://pubmed.ncbi.nlm.nih.gov/33589617/", "target": "_blank"}
+                ),
+                "."
             )
+
+            # ✅ just make it a plain button instead of input_action_button
+            explore_button = ui.tags.button(
+                "Explore on PrimeDesign",
+                id="toggle_prime",
+                style="margin:10px; padding:6px 12px; border-radius:4px;"
+            )
+
+            prime_iframe = ui.div(
+                ui.tags.iframe(
+                    src="https://primedesign-dash.onrender.com/",
+                    style="width:100%; height:80vh; border:1px solid #ccc; border-radius:8px; display:none;",
+                    id="prime_iframe",
+                    title="PrimeDesign Portal",
+                    loading="lazy"
+                )
+            )
+
+            # ✅ simple JS toggle on button click
+            toggle_script = ui.tags.script("""
+              document.addEventListener("click", function(e) {
+                if (e.target && e.target.id === "toggle_prime") {
+                  var iframe = document.getElementById("prime_iframe");
+                  if (iframe.style.display === "none") {
+                    iframe.style.display = "block";
+                    e.target.innerText = "Close PrimeDesign";
+                  } else {
+                    iframe.style.display = "none";
+                    e.target.innerText = "Explore on PrimeDesign";
+                  }
+                }
+              });
+            """)
+
+            # Append
+            ui_elements.append(help_text)
+            ui_elements.append(explore_button)
+            ui_elements.append(prime_iframe)
+            ui_elements.append(toggle_script)
+
 
         # Append the card to the UI elements
         ui_elements.append(ui_card(
