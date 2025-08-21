@@ -342,22 +342,37 @@ def check_ref_edited_pair(ref_sequence, edited_sequence, edit_start=4, edit_end=
 
 def create_prime_del_plasmid_card(guides_df, editor_info, editor_url):
     return ui_card(
-        "Suggested Addgene Plasmids for PRIME-DEL",
-        "integrase_only_card",
-        ui.help_text("PE2 prime editor plasmid"),
+        "Suggested Addgene Plasmids",
+        "prime_del_plasmids",
+        ui.help_text("Recommended pegRNA Plasmid A: Prime-Del Backbone (Addgene: 172657)"),
+        ui.br(),
+        ui.help_text("Recommended pegRNA Plasmid B: Prime-Del Backbone (Addgene: 172658)"),
+        ui.br(),
+        ui.help_text("Recommended Prime Editor Plasmid: PE2 (Addgene: 199267)"),
         ui.br(),
         ui.br(),
         ui.div(
-            {"class": "d-flex gap-2"},
+            {"class": "d-flex"},
             ui.tags.a(
-                "pEF_PE2",
+                "View Backbone A",
+                href="http://n2t.net/addgene:172657",
+                target="_blank",
+                class_="btn btn-primary me-2"
+            ),
+            ui.tags.a(
+                "View Backbone B",
+                href="http://n2t.net/addgene:172658",
+                target="_blank",
+                class_="btn btn-primary me-2"
+            ),
+            ui.tags.a(
+                "View Prime Editor Plasmid",
                 href="http://n2t.net/addgene:199267",
                 target="_blank",
                 class_="btn btn-primary"
             ),
-        )
+        ),
     )
-
 def create_prime_editing_plasmid_card(guides_df, editor_info, editor_url):
     pegRNA_oligo_top = guides_df["pegRNA Spacer Oligo Top"].tolist()
     pegRNA_oligo_extension_bottom = guides_df['pegRNA Extension Oligo Bottom'].tolist()
@@ -731,28 +746,60 @@ def generate_prime_del_protocols_section(guides_df):
             ui.br(),
             ui.tags.ul(
                 ui.tags.li("PE2 Prime Editor plasmid (Addgene #199267)"),
-                ui.tags.li("Paired pegRNAs (custom designed or Addgene pegRNA backbones such as #172657, #172658)"),
+                ui.tags.li("pegRNA backbones (Addgene #172657, #172658)"),
+                ui.tags.li("Custom pegRNA oligos or gene blocks (from EditABLE output)"),
             ),
             ui.br(),
 
             # Step 1
-            ui.tags.span("Step 1: Cell Culture and Transfection"),
+            ui.tags.span("Step 1: Clone pegRNAs into Backbone"),
+            ui.br(),
+            ui.tags.ul(
+                ui.tags.li("Gene block method (recommended for pegRNAs with PBS + RTT):"),
+                ui.tags.ul(
+                    ui.tags.li(
+                        "Order pegRNA sequences as synthetic gene blocks (IDT, Twist, etc.) with flanking BsaI sites."),
+                    ui.tags.li(
+                        "Digest both gene block and pegRNA backbone plasmid with BsaI-HFv2 (NEB) at 37 °C for 1 hr."),
+                    ui.tags.li("Heat inactivate at 80 °C for 20 min."),
+                    ui.tags.li("Gel purify digested products (e.g., Zymo D4007 kit)."),
+                    ui.tags.li("Ligate insert into backbone with T4 DNA ligase."),
+                ),
+                ui.br(),
+                ui.tags.li("Oligo annealing method (for short pegRNA spacers ≤24 nt):"),
+                ui.tags.ul(
+                    ui.tags.li("Order paired oligos with EditABLE-provided CACC/AAAC overhangs."),
+                    ui.tags.li("Anneal oligos: 95 °C for 5 min, then cool to 25 °C."),
+                    ui.tags.li("Ligate into BsaI-digested backbone plasmid."),
+                ),
+                ui.br(),
+                ui.tags.li("Transformation & Screening:"),
+                ui.tags.ul(
+                    ui.tags.li("Transform ligation into competent E. coli (DH5α)."),
+                    ui.tags.li("Plate on LB agar + antibiotic (per plasmid resistance)."),
+                    ui.tags.li("Screen colonies by colony PCR or direct sequencing."),
+                ),
+            ),
+            ui.br(),
+
+            # Step 2
+            ui.tags.span("Step 2: Cell Culture and Transfection"),
             ui.br(),
             ui.tags.ul(
                 ui.tags.li(
-                    "Plate cells (e.g., HEK293T, U2OS, or your target line) 24 hrs before transfection to reach ~70% confluency."),
-                ui.tags.li("Transfect cells with:"),
+                    "Plate cells (e.g., HEK293T, U2OS, or target line) 24 hrs before transfection to reach ~70% confluency."),
+                ui.tags.li("Transfect with:"),
                 ui.tags.ul(
-                    ui.tags.li("PE2 plasmid: 1–2 µg per well in a 6-well plate"),
-                    ui.tags.li("Paired pegRNA plasmid(s): 0.5–1 µg each"),
+                    ui.tags.li("PE2 plasmid (Addgene #199267): 1–2 µg per well in a 6-well plate"),
+                    ui.tags.li("Paired pegRNA plasmids: 0.5–1 µg each"),
                 ),
                 ui.tags.li("Use Lipofectamine 3000 (ThermoFisher) or electroporation for harder-to-transfect cells."),
                 ui.tags.li("Include a control well (PE2 + no pegRNAs)."),
             ),
             ui.br(),
 
-            # Step 4
-            ui.tags.span("Step 4: Expression and Editing"),
+            # Step 3
+            ui.tags.span("Step 3: Expression and Editing"),
             ui.br(),
             ui.tags.ul(
                 ui.tags.li("Incubate cells for 72–96 hours to allow editing."),
@@ -761,8 +808,8 @@ def generate_prime_del_protocols_section(guides_df):
             ),
             ui.br(),
 
-            # Step 5
-            ui.tags.span("Step 5: Harvest and DNA Analysis"),
+            # Step 4
+            ui.tags.span("Step 4: Harvest and DNA Analysis"),
             ui.br(),
             ui.tags.ul(
                 ui.tags.li("Extract genomic DNA from cells."),
@@ -1717,7 +1764,7 @@ def server(input, output, session):
                 "please visit the ",
                 ui.tags.a(
                     "PrimeDesign portal",
-                    {"href": "https://primedesign-dash.onrender.com/", "target": "_blank"}
+                    {"href": "https://prime-design-766275861038.us-east1.run.app/", "target": "_blank"}
                 ),
                 " or see the original publication ",
                 ui.tags.a(
@@ -1735,7 +1782,7 @@ def server(input, output, session):
 
             prime_iframe = ui.div(
                 ui.tags.iframe(
-                    src="https://primedesign-dash.onrender.com/",
+                    src="https://prime-design-766275861038.us-east1.run.app/",
                     style="width:100%; height:80vh; border:1px solid #ccc; border-radius:8px; display:none;",
                     id="prime_iframe",
                     title="PrimeDesign Portal",
