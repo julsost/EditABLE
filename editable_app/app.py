@@ -342,7 +342,7 @@ def check_ref_edited_pair(ref_sequence, edited_sequence, edit_start=4, edit_end=
 
 def create_prime_del_plasmid_card(guides_df, editor_info, editor_url):
     return ui_card(
-        "Suggested Addgene Plasmids for Prime-DEL",
+        "Suggested Addgene Plasmids for PRIME-DEL",
         "integrase_only_card",
         ui.help_text("PE2 prime editor plasmid"),
         ui.br(),
@@ -430,7 +430,7 @@ def create_twin_prime_editing_plasmid_card(guides_df, editor_info, editor_url):
         prime_card_elements.append(ui.br())
 
     # Add the recommended prime editing plasmid information
-    prime_card_elements.append(ui.help_text(f"Recommended Prime Editor Plasmid for creating BxbI integration site: {editor_info}"))
+    prime_card_elements.append(ui.help_text(f"Recommended Prime Editor Plasmid for creating Bxb1 integration site: {editor_info}"))
     prime_card_elements.append(ui.br())
     prime_card_elements.append(ui.br())
 
@@ -447,7 +447,7 @@ def create_twin_prime_editing_plasmid_card(guides_df, editor_info, editor_url):
     )
 
     return ui_card(
-        "Suggested Addgene Plasmids - BxbI integration step",
+        "Suggested Addgene Plasmids - Bxb1 integration step",
         "recommended_prime_editor",
         *[element for element in prime_card_elements if element is not None]  # Filter out None elements
     )
@@ -771,7 +771,6 @@ def generate_prime_del_protocols_section(guides_df):
                 ui.tags.li("Sequence PCR products (Sanger or NGS) to confirm precise deletion junction."),
             ),
             ui.br(),
-            ui.br(),
         )
     ]
 
@@ -903,15 +902,14 @@ def generate_prime_del_visualization(guides_df, ref_sequence_input, substitution
     # Center the image
 
     prime_del_visualization_elements.append(intro_text)
-    prime_del_visualization_elements.append(ui.br())
-    prime_del_visualization_elements.append(ui.br())
     prime_del_visualization_elements.append(
         ui.div(
             ui.output_image("prime_del_visualization_image"),
             {
-                "style": "text-align: center; min-height: 0;"
+                "style": "margin:0; padding:0; line-height:0;"  # kill card body line-height
             }
         )
+
     )
     prime_del_visualization_elements.append(ui.br())
 
@@ -932,7 +930,7 @@ def generate_prime_editing_visualization(guides_df, ref_sequence_input, substitu
 
     # Add the introductory text with colored formatting
     intro_text = ui.help_text(
-        "This section provides a visualization of the recommended prime editing guide RNA design for installing a BxbI integration site. ",
+        "This section provides a visualization of the recommended prime editing guide RNA design for installing a Bxb1 integration site. ",
         "The ", ui.tags.b("red", style="color: red;"), " characters represent the pegRNA spacer, ",
         "the ", ui.tags.b("blue", style="color: blue;"), " characters represent the SpCas9 scaffold, ",
         "the ", ui.tags.b("orange", style="color: orange;"), " characters represent the pegRNA extension sequence, ",
@@ -1326,7 +1324,18 @@ def server(input, output, session):
     @output
     @render.image
     def prime_del_visualization_image():
-        img: ImgData = {"src": str(Path(__file__).parent / "Prime_del_diagram.png"), "style": "max-width: 100%; height: auto;"}
+        return {
+            "src": str(Path(__file__).parent / "Prime_del_diagram.png"),
+            "style": (
+                "display:block;"  # no inline baseline gap
+                "margin:0;"
+                "padding:0;"
+                "border:0;"
+                "max-width:100%;"
+                "height:auto;"
+                "vertical-align:top;"  # <-- critical to kill the white gap under the image
+            )
+        }
         return img
 
     @output
@@ -1486,7 +1495,7 @@ def server(input, output, session):
                 to_display_guides_df,
                 width="100%",
                 filters=False,
-                summary=True,
+                summary=False,
             )
 
         @session.download(
@@ -1624,7 +1633,7 @@ def server(input, output, session):
                 to_display_guides_df,
                 width="100%",
                 filters=False,
-                summary=True,
+                summary=False,
             )
 
         @render.download(
@@ -1671,7 +1680,7 @@ def server(input, output, session):
                 ui.tags.b(" A higher score is better for both algorithms.", style="text-decoration: bold")
             )
         elif any(col.startswith("Prime-Del ") for col in guides_df.columns):
-            guide_title = "Recommended PRIME-DelpegRNA sequences"
+            guide_title = "Recommended PRIME-Del pegRNA sequences"
             help_text = ui.help_text("Note: PRIME-Del is a genome editing method based on prime "
                                      "editing that facilitates the precise deletion of DNA sequences. "       
                                     "We use the Shendure Labs's algorithm with default parameters, "
@@ -1686,6 +1695,7 @@ def server(input, output, session):
                                         "(Choi, J., et al. 2021 Nat Biotech)",
                                         {"href": "https://www.nature.com/articles/s41587-021-01025-z", "target": "_blank"}
                                     ),
+                                    ui.br(),
                                      "."
                                      )
             ui_elements.append(
@@ -1717,15 +1727,10 @@ def server(input, output, session):
                 "."
             )
 
-
-            explore_button = ui.div(
-                ui.tags.button(
-                    "Explore on PrimeDesign",
-                    id="toggle_prime",
-                    class_="btn btn-outline-primary",  # light blue
-                    style="margin:10px;"
-                ),
-                style="text-align:left;"
+            explore_button = ui.tags.button(
+                "Explore on PrimeDesign",
+                id="toggle_prime",
+                style="margin:10px; padding:6px 12px; border-radius:4px;"
             )
 
             prime_iframe = ui.div(
@@ -1738,37 +1743,41 @@ def server(input, output, session):
                 )
             )
 
+            # One event listener handles open/close + table hide/show
             toggle_script = ui.tags.script("""
+            (function () {
+              function $(id){ return document.getElementById(id); }
               document.addEventListener("click", function(e) {
-                if (e.target && e.target.id === "toggle_prime") {
-                  var iframe = document.getElementById("prime_iframe");
-                  if (iframe.style.display === "none") {
-                    iframe.style.display = "block";
-                    e.target.innerText = "Close PrimeDesign";
-                  } else {
-                    iframe.style.display = "none";
-                    e.target.innerText = "Explore on PrimeDesign";
-                  }
-                }
-              });
+                if (!e.target) return;
+                if (e.target.id !== "toggle_prime" && e.target.id !== "toggle_twin_prime") return;
+
+                var isTwin = e.target.id === "toggle_twin_prime";
+                var iframe = $(isTwin ? "twin_prime_iframe" : "prime_iframe");
+                var tableCard = $("guides_table_card");
+
+                var opening = (iframe.style.display === "" || iframe.style.display === "none");
+                iframe.style.display = opening ? "block" : "none";
+                e.target.innerText = opening ? "Close PrimeDesign" : "Explore on PrimeDesign";
+                if (tableCard) tableCard.style.display = opening ? "none" : "";
+              }, true);
+            })();
             """)
 
-
+            ui_elements.append(help_text)
+            ui_elements.append(explore_button)
+            ui_elements.append(prime_iframe)
+            ui_elements.append(toggle_script)
 
             ui_elements.append(
-                ui_card(
-                    guide_title,
-                    'guides_df',
-                    help_text,
-                    ui.br(),
-                    explore_button,  # 👈 now directly under the note
-                    ui.br(),
-                    prime_iframe,  # iframe is hidden until toggled
-                    toggle_script,
-                    ui.output_data_frame("render_results")
+                ui.div(
+                    ui_card(
+                        guide_title,
+                        "guides_df",
+                        ui.output_data_frame("render_results")
+                    ),
+                    {"id": "guides_table_card"}
                 )
             )
-
 
         if 'Base Editing' in filtered_guides_df['Editing Technology'].values:
             ui_elements.append(
@@ -1830,7 +1839,7 @@ def server(input, output, session):
             twin_prime_editing_plasmid_card = create_twin_prime_editing_plasmid_card(twin_prime_editing_guides_df,
                                                                                      editor_info, editor_url)
             ui_elements.append(ui_card(
-                "Visualization of Prime Editing Guides - Creating BxbI Integration site",
+                "Visualization of Prime Editing Guides - Creating Bxb1 Integration site",
                 "prime_editing_visualization",
                 *generate_twin_prime_editing_visualization(twin_prime_editing_guides_df, ref_sequence_input,
                                                            substitution_position, PAM)
@@ -1844,7 +1853,7 @@ def server(input, output, session):
             ui_elements.append(generate_donor_protocols_section(twin_prime_editing_guides_df))
 
             ui_elements.append(ui_card(
-                "Visualization of BxbI Integrase Step",
+                "Visualization of Bxb1 Integrase Step",
                 "prime_editing_visualization",
                 *generate_integrase_visualization(guides_df, ref_sequence_input, substitution_position, PAM)
             ))
@@ -1857,10 +1866,11 @@ def server(input, output, session):
             prime_del_plasmid_card = create_prime_del_plasmid_card(guides_df, editor_info, editor_url)
             ui_elements.append(prime_del_plasmid_card)
             ui_elements.append(ui_card(
-                "Visualization of BxbI Integrase Step",
+                "Visualization of PRIME-Del",
                 "prime_editing_visualization",
                 *generate_prime_del_visualization(guides_df, ref_sequence_input, substitution_position, PAM)
             ))
+
 
             ui_elements.append(generate_prime_del_protocols_section(twin_prime_editing_guides_df))
 
