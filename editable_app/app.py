@@ -8,7 +8,7 @@ from utils import get_guides, almost_reverse_complement, get_editor_info, proces
     process_ng_rnas, process_peg_rnas, visualization_peg_rnas, visualization_ng_rnas, handle_insertions
 from shiny import App, render, ui, reactive
 from shiny.types import ImgData
-
+import asyncio
 
 
 bases = {"A", "C", "G", "T"}
@@ -16,45 +16,82 @@ accepted_bases = {"A", "C", "G", "T", "-"}
 #df_dict_result, bxb1_seq, modified_seq = handle_insertions(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original)
 # A card component wrapper.
 def ui_card(title, id, *args):
-    return (
+    return ui.div(
+        {"class": "card mb-3"},
         ui.div(
-            {"class": "card mb-4"},
-            ui.div(title, class_="card-header"),
-            ui.div({"class": "card-body", "id": id}, *args),
+            {
+                "class": "card-header",
+                "style": "background-color:#dcf1fa; font-weight:600; font-size:1.1rem;"
+            },
+            title,
         ),
+        ui.div({"class": "card-body", "id": id}, *args),
     )
 
 
 app_ui = ui.page_fluid(
     {"id": "main-content"},
-    ui.output_image("display_logo", inline=True),
-    ui.output_image("stanford_logo", inline=True),
-    ui.br(),
-    ui.help_text(
-        '''Welcome to EditABLE!! We have designed this tool as a starting point for determining the optimal gene editing tool for a single gene edit. 
-        Our algorithm is pending publication, but at a high level, it prioritizes base editing due to greater efficiency followed by prime editing. 
-        Please refer to the following papers for more information on base and prime editing:'''
+
+ui.tags.script("""
+(function () {
+  if (window.__primeToggleInit) return;   // avoid double-binding on hot reload
+  window.__primeToggleInit = true;
+
+  function $(id){ return document.getElementById(id); }
+
+  // One delegated listener that works for any future renders
+  document.addEventListener("click", function(e) {
+    var t = e && e.target;
+    if (!t) return;
+    if (t.id !== "toggle_prime" && t.id !== "toggle_twin_prime") return;
+
+    var isTwin = (t.id === "toggle_twin_prime");
+    var iframe = $(isTwin ? "twin_prime_iframe" : "prime_iframe");
+    var tableCard = $("guides_table_card");
+    if (!iframe) return;                      // if UI hasn't rendered yet
+
+    var opening = (iframe.style.display === "" || iframe.style.display === "none");
+    iframe.style.display = opening ? "block" : "none";
+    t.innerText = opening ? "Close PrimeDesign" : "Explore on PrimeDesign";
+    if (tableCard) tableCard.style.display = opening ? "none" : "";
+  }, true);
+
+  // Allow the server to reset things between runs
+  if (window.Shiny) {
+    Shiny.addCustomMessageHandler("primeToggleReset", function () {
+      [["toggle_prime","prime_iframe"],["toggle_twin_prime","twin_prime_iframe"]].forEach(function([b,i]){
+        var btn = $(b), ifr = $(i);
+        if (btn) btn.innerText = "Explore on PrimeDesign";
+        if (ifr) ifr.style.display = "none";
+      });
+      var tableCard = $("guides_table_card");
+      if (tableCard) tableCard.style.display = "";
+    });
+  }
+})();
+"""),
+    ui.div(
+        {
+            "style": (
+                "width:calc(100% + 30px); margin-left:-15px; margin-right:15px; justify-content:left; align-items:center; gap:0px; "
+                "background-color:#dcf1fa; padding:0px ; margin-bottom:30px;"
+            )
+        },
+        ui.div(  # inner container to match text alignment
+        {"style": "max-width:11000px; margin:1000 auto; padding:0px 10px; display:flex; justify-content:left; align-items:center;"},
+        ui.output_image("display_logo", inline=True),
+        ui.output_image("stanford_logo", inline=True),
+        ),
     ),
-    ui.br(),
-    ui.br(),
-    ui.help_text(ui.tags.a(
-        'Komor AC, Kim YB, Packer MS, Zuris JA, Liu DR. Programmable editing of a target base in genomic DNA without double-stranded DNA cleavage. Nature. 2016;533(7603):420-424.',
-        {'href': 'https://pubmed.ncbi.nlm.nih.gov/27096365/', 'target': '_blank'})),
-    ui.br(),
-    ui.br(),
-    ui.help_text(ui.tags.a(
-        'Gaudelli NM, Komor AC, Rees HA, et al. Programmable base editing of A•T to G•C in genomic DNA without DNA cleavage. Nature. 2017;551(7681):464-471.',
-        {'href': 'https://pubmed.ncbi.nlm.nih.gov/29160308/', 'target': '_blank'})),
-    ui.br(),
-    ui.br(),
-    ui.help_text(ui.tags.a(
-        'Anzalone AV, Randolph PB, Davis JR, et al. Search-and-replace genome editing without double-strand breaks or donor DNA. Nature. 2019;576(7785):149-157.',
-        {'href': 'https://pubmed.ncbi.nlm.nih.gov/31634902/', 'target': '_blank'})),
-    ui.br(),
-    ui.br(),
-    ui.help_text(ui.tags.a(
-        'Doman JL, Pandey S, Neugebauer ME, et al. Phage-assisted evolution and protein engineering yield compact, efficient prime editors. Cell. 2023;186(18):3983-4002.e26.',
-        {'href': 'https://pubmed.ncbi.nlm.nih.gov/37657419/', 'target': '_blank'})),
+
+ui.div(
+    {"style": "max-width:1300px; margin:0 auto; padding:0 10px;"},
+    ui.markdown("**Welcome to EditABLE!**"),
+    ui.help_text(
+        '''For troubleshooting and suggested revisions, please contact the ''',
+        ui.tags.a("Bhalla Lab", {'href': 'https://med.stanford.edu/bhallalab.html', 'target': '_blank'}),
+        " at vbhalla@stanford.edu"
+    ),
     ui.br(),
     ui.br(),
     ui_card(
@@ -94,6 +131,7 @@ app_ui = ui.page_fluid(
             If a base editing guide cannot be found, we will then provide suggested prime editing reagents if possible.'''
         )
     ),
+
     ui_card(
         "Input requirements",
         "input_recs",
@@ -199,6 +237,7 @@ app_ui = ui.page_fluid(
             ''' highlighted regions. '''
         )
     ),
+
     ui_card(
         "Input",
         'input',
@@ -236,19 +275,18 @@ app_ui = ui.page_fluid(
         ),
         ui.output_ui("advanced_settings")
     ),
-
+),
     ui.output_ui("run_with_csv_input"),
     ui.output_ui("run_with_text_input"),
-    ui.help_text(
-        '''For troubleshooting and suggested revisions, please contact the ''',
-        ui.tags.a("Bhalla Lab", {'href': 'https://med.stanford.edu/bhallalab.html', 'target': '_blank'}),
-        " at vbhalla@stanford.edu"
-    ),
     ui.br(),
     ui.br(),
     ui.br(),
     ui.br(),
+
 )
+
+
+
 
 
 # checks if no guides found
@@ -944,21 +982,19 @@ def generate_prime_del_visualization(guides_df, ref_sequence_input, substitution
         "Steps shown: nick by PE2 (Cas9 H840A), reverse transcription to form 3′ flaps, and DNA repair to create a precise deletion (optionally with a short, encoded insert)."
     )
 
-
+    # Center the image
 
     # Center the image
 
     prime_del_visualization_elements.append(intro_text)
+
+    prime_del_visualization_elements.append(ui.br())
     prime_del_visualization_elements.append(
         ui.div(
             ui.output_image("prime_del_visualization_image"),
-            {
-                "style": "margin:0; padding:0; line-height:0;"  # kill card body line-height
-            }
+            {"style": "text-align: left;"}
         )
-
     )
-    prime_del_visualization_elements.append(ui.br())
 
     return prime_del_visualization_elements
 
@@ -1371,18 +1407,7 @@ def server(input, output, session):
     @output
     @render.image
     def prime_del_visualization_image():
-        return {
-            "src": str(Path(__file__).parent / "Prime_del_diagram.png"),
-            "style": (
-                "display:block;"  # no inline baseline gap
-                "margin:0;"
-                "padding:0;"
-                "border:0;"
-                "max-width:100%;"
-                "height:auto;"
-                "vertical-align:top;"  # <-- critical to kill the white gap under the image
-            )
-        }
+        img: ImgData = {"src": str(Path(__file__).parent / "prime_del_diagram.png"), "width": "1000px"}
         return img
 
     @output
@@ -1517,9 +1542,13 @@ def server(input, output, session):
     @render.ui
     @reactive.event(input.find_guides_csv)
     def run_with_csv_input():
+        session.send_custom_message("primeToggleReset", None)
+
         nonlocal input_file
+
         if not input_file:
-            return display_error_message("No CSV file uploaded")
+            ui.notification_show("No CSV file uploaded", type="warning", duration=5)
+            return
 
         df = pd.read_csv(input_file)
 
@@ -1610,6 +1639,8 @@ def server(input, output, session):
     @render.ui
     @reactive.event(input.find_guides_text)
     def run_with_text_input():
+        session.send_custom_message("primeToggleReset", None)
+
         ref_sequence_input = "".join(input.ref_sequence_input().split()).upper()
         #print(ref_sequence_input)
 
@@ -1726,6 +1757,15 @@ def server(input, output, session):
                           {'href': 'https://pubmed.ncbi.nlm.nih.gov/25184501/', 'target': '_blank'}),
                 ui.tags.b(" A higher score is better for both algorithms.", style="text-decoration: bold")
             )
+            ui_elements.append(
+                ui_card(
+                    guide_title,
+                    'guides_df',
+                    help_text,
+                    ui.br(),
+                    ui.output_data_frame("render_results")
+                )
+            )
         elif any(col.startswith("Prime-Del ") for col in guides_df.columns):
             guide_title = "Recommended PRIME-Del pegRNA sequences"
             help_text = ui.help_text("Note: PRIME-Del is a genome editing method based on prime "
@@ -1773,6 +1813,16 @@ def server(input, output, session):
                 ),
                 "."
             )
+            ui_elements.append(ui.tags.script("""
+            (function(){
+              var b = document.getElementById("toggle_prime");
+              var f = document.getElementById("prime_iframe");
+              if (b) b.innerText = "Explore on PrimeDesign";
+              if (f) f.style.display = "none";
+              var card = document.getElementById("guides_table_card");
+              if (card) card.style.display = ""; // make sure table is visible again
+            })();
+            """))
 
             explore_button = ui.tags.button(
                 "Explore on PrimeDesign",
@@ -1790,30 +1840,11 @@ def server(input, output, session):
                 )
             )
 
-            # One event listener handles open/close + table hide/show
-            toggle_script = ui.tags.script("""
-            (function () {
-              function $(id){ return document.getElementById(id); }
-              document.addEventListener("click", function(e) {
-                if (!e.target) return;
-                if (e.target.id !== "toggle_prime" && e.target.id !== "toggle_twin_prime") return;
-
-                var isTwin = e.target.id === "toggle_twin_prime";
-                var iframe = $(isTwin ? "twin_prime_iframe" : "prime_iframe");
-                var tableCard = $("guides_table_card");
-
-                var opening = (iframe.style.display === "" || iframe.style.display === "none");
-                iframe.style.display = opening ? "block" : "none";
-                e.target.innerText = opening ? "Close PrimeDesign" : "Explore on PrimeDesign";
-                if (tableCard) tableCard.style.display = opening ? "none" : "";
-              }, true);
-            })();
-            """)
 
             ui_elements.append(help_text)
             ui_elements.append(explore_button)
             ui_elements.append(prime_iframe)
-            ui_elements.append(toggle_script)
+
 
             ui_elements.append(
                 ui.div(
@@ -1921,13 +1952,34 @@ def server(input, output, session):
 
             ui_elements.append(generate_prime_del_protocols_section(twin_prime_editing_guides_df))
 
+        # _________________________________
+        @reactive.Effect
+        @reactive.event(input.sequence, input.find_guides, input.find_batch_guides)
+        def _reset_for_new_run():
+            # 1) clear any inline status text (if you use it)
+            status_msg.set("")
 
+            # 2) clear any data-backed outputs by resetting their reactive sources
+            # (examples – adapt to your names)
+            # guides_df is whatever you feed into your guides table render
+            try:
+                guides_df.set(None)
+            except NameError:
+                pass  # if you don’t use a reactive.Value for the table, skip
+
+            # 3) tell the browser to hide iframes and restore button labels
+            session.send_custom_message("resetPrimeToggle", None)
+
+        #_________________________________
         ui_elements.append(ui.download_button("download_results", "Download Results as CSV File"))
         return ui.TagList(
+            ui.div(
+                {"style": "max-width:1300px; margin:0 auto; padding:0 10px;"},
             ui_card(
                 "Single Sequence Results",
                 'results',
                 *ui_elements
+            )
             )
         )
 
@@ -1935,14 +1987,14 @@ def server(input, output, session):
     @render.image
     def display_logo():
         dir = Path(__file__).resolve().parent
-        img: ImgData = {"src": str(dir / "EditABLE-logos_transparent.png"), "width": "300px"}
+        img: ImgData = {"src": str(dir / "EditABLE-logos_transparent.png"), "width": "100px"}
         return img
 
     @output
     @render.image
     def stanford_logo():
         dir = Path(__file__).resolve().parent
-        img: ImgData = {"src": str(dir / "SOM_Web_vert_LG.png"), "width": "300px"}
+        img: ImgData = {"src": str(dir / "SOM_Web_vert_LG.png"), "width": "100px"}
         return img
 
 
