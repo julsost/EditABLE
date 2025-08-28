@@ -1604,7 +1604,9 @@ def server(input, output, session):
 
         ui_elements = [
             ui.help_text(
-                '''Note: for base editing, we will show multiple guide RNAs, but for prime editing, we will only show the recommended PrimeDesign guide RNA. The off-target score is calculated using the CFD score algorithm (Doench et al. 2014) where a higher score indicates a lower likelihood of off-target activity. The on-target score is calculated using the RuleSet1 algorithm where a higher score indicates greater efficiency of guide RNA binding to the genomic target sequence. Both algorithms are from ''',
+                '''Note: for base editing, we will show multiple guide RNAs, but for prime editing, we will only show the recommended PrimeDesign guide RNA. The off-target score is calculated using the CFD score algorithm (Doench et al. 2014) where a higher score indicates a lower likelihood of off-target activity. The on-target score is calculated using the RuleSet3 algorithm where a higher score indicates greater efficiency of guide RNA binding to the genomic target sequence. Both algorithms are from ''',
+                ui.tags.a('Doench et al. 2014 Nat Biotechnol.',
+                          {'href': 'https://pubmed.ncbi.nlm.nih.gov/25184501/', 'target': '_blank'}),
                 ui.tags.a('Doench et al. 2014 Nat Biotechnol.',
                           {'href': 'https://pubmed.ncbi.nlm.nih.gov/25184501/', 'target': '_blank'}),
                 ui.tags.b(" A higher score is better for both algorithms.", style="text-decoration: bold")
@@ -1743,9 +1745,11 @@ def server(input, output, session):
         if "Base Editing" in filtered_guides_df['Editing Technology'].values:
             guide_title = "Recommended Base Editing Guide RNAs"
             help_text = ui.help_text(
-                '''Note: Multiple guide RNAs are shown with the ability to toggle based on optimal on-target and off-target scoring. The off-target score is calculated using the CFD score algorithm where a higher score indicates a lower likelihood of off-target activity. The on-target score is calculated using the RuleSet1 algorithm where a higher score indicates greater efficiency of guide RNA binding to the genomic target sequence. For additional information on these algorithms, please see the original publication ''',
+                '''Note: Multiple guide RNAs are shown with the ability to toggle based on optimal on-target and off-target scoring. The off-target score is calculated using the CFD score algorithm where a higher score indicates a lower likelihood of off-target activity. The on-target score is calculated using the RuleSet1 algorithm where a higher score indicates greater efficiency of guide RNA binding to the genomic target sequence. For additional information on these algorithms, please see the original publications ''',
                 ui.tags.a('Doench et al. 2014 Nat Biotechnol.',
                           {'href': 'https://pubmed.ncbi.nlm.nih.gov/25184501/', 'target': '_blank'}),
+                ui.tags.a('DeWeirdt et al. 2022 Nature Communications',
+                          {'href': 'https://www.nature.com/articles/s41467-022-33024-2', 'target': '_blank'}),
                 ui.tags.b(" A higher score is better for both algorithms.", style="text-decoration: bold")
             )
             ui_elements.append(
