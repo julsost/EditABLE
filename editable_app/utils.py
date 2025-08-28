@@ -1106,7 +1106,7 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM, edit_start=
 
 
                 df_dict['RS3 Probability (%)'].append(
-                    100 * float(rs3) if rs3 is not None else None
+                    float(rs3) if rs3 is not None else None
                 )
 
                 df_dict['Bystander Edits?'].append(position_info)
