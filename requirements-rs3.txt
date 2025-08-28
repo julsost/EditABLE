@@ -1,0 +1,12 @@
+fastapi==0.112.2
+uvicorn[standard]==0.30.6
+rs3==0.0.16
+lightgbm==3.3.5
+sglearn
+seqfold
+numpy
+pandas
+scikit-learn
+scipy
+biopython
+joblib
