@@ -834,7 +834,7 @@ def add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequen
     df_dict['Base Editing Guide'].append(None)
     df_dict['Off Target Score'].append(None)
     #df_dict['On Target Score'].append(None)
-    #df_dict['RS3 Probability (%)'].append(None)
+    #df_dict['On Target Score (RS3)'].append(None)
     df_dict['Bystander Edits?'].append(None)
     df_dict['pegRNA Annotation'].append(None)
     df_dict['pegRNA PBS'].append(None)
@@ -856,7 +856,7 @@ def update_df_dict_with_primedesign_output(df_dict, ref_sequence_original, edite
     df_dict['Original Sequence'].append(ref_sequence_original)
     df_dict['Desired Sequence'].append(edited_sequence_original)
     df_dict['Editing Technology'].append(editing_technology)
-    #df_dict['RS3 Probability (%)'].append(None)
+    #df_dict['On Target Score (RS3)'].append(None)
     df_dict['pegRNA Annotation'].append(peg_annotation_recommended)
     df_dict['pegRNA PBS'].append(peg_pbs_recommended)
     df_dict['pegRNA RTT'].append(peg_rtt_recommended)
@@ -1105,7 +1105,7 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM, edit_start=
                 #df_dict['On Target Score'].append(float(on_score) if on_score is not None else None)
 
 
-                df_dict['RS3 Probability (%)'].append(
+                df_dict['On Target Score (RS3)'].append(
                     float(rs3) if rs3 is not None else None
                 )
 
