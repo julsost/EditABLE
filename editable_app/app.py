@@ -1224,10 +1224,6 @@ def generate_integrase_visualization(guides_df, ref_sequence_input, substitution
     return integrase_visualization_elements
 
 
-
-
-
-
 def generate_prime_del_section(prime_editing_guides_df):
     """
     Generate a styled UI section for displaying Prime-Del pegRNAs and related info.
@@ -1381,7 +1377,7 @@ def server(input, output, session):
     DEFAULT_BASE_EDITING_WINDOW_START = 4
     DEFAULT_BASE_EDITING_WINDOW_END = 9
 
-    # DEFAULT_RS3_TOGGLE = False
+
 
     # Function to get base editing window values
     def get_base_editing_window(mutation_type=None):
@@ -1392,11 +1388,7 @@ def server(input, output, session):
         else:
             return DEFAULT_BASE_EDITING_WINDOW_START, DEFAULT_BASE_EDITING_WINDOW_END
 
-    # def get_calculate_rs3():
-    #     if input.advanced_settings_toggle() % 2 == 1:
-    #         return input.rs3_toggle()
-    #     else:
-    #         return DEFAULT_RS3_TOGGLE
+
 
     @output
     @render.image
@@ -1522,7 +1514,7 @@ def server(input, output, session):
                     ui.input_numeric("base_editing_window_start", "Base Editing Window Start", value=4, min=1, max=20),
                     ui.input_numeric("base_editing_window_end", "Base Editing Window End", value=9, min=1, max=20)
                 ),
-                #     ui.input_checkbox("rs3_toggle", "Calculate RuleSet3 Scores?", value=True)
+
             )
         else:
             return ui.div()
@@ -1655,7 +1647,6 @@ def server(input, output, session):
         selected_PAM = user_selected_pam.get() or "NGG"  # Default to NGG if no PAM is selected
         PAM = selected_PAM
 
-        # calculate_rs3 = get_calculate_rs3()
 
         valid_inputs, message = check_ref_edited_pair(ref_sequence_input, edited_sequence_input,
                                                       base_editing_window_start, base_editing_window_end)
@@ -1952,16 +1943,10 @@ def server(input, output, session):
 
             ui_elements.append(generate_prime_del_protocols_section(twin_prime_editing_guides_df))
 
-        # _________________________________
         @reactive.Effect
         @reactive.event(input.sequence, input.find_guides, input.find_batch_guides)
         def _reset_for_new_run():
-            # 1) clear any inline status text (if you use it)
             status_msg.set("")
-
-            # 2) clear any data-backed outputs by resetting their reactive sources
-            # (examples – adapt to your names)
-            # guides_df is whatever you feed into your guides table render
             try:
                 guides_df.set(None)
             except NameError:

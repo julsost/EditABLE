@@ -26,7 +26,7 @@ params: List[Tuple[int, str, float]] = [
     (26, 'GT', 0.11787758), (28, 'GG', -0.69774)
 ]
 
-#  mismatch scores and PAM scores dictionaries for off target scoring 
+#  mismatch scores and PAM scores dictionaries for off target scoring
 mismatch_scores: Dict[str, float] = {
     'rU:dT,12': 0.8, 'rU:dT,13': 0.692307692, 'rU:dC,5': 0.64,
     'rG:dA,14': 0.266666667, 'rG:dG,19': 0.448275862, 'rG:dG,18': 0.476190476,
@@ -121,6 +121,7 @@ intercept = 0.59763615
 gcHigh = -0.1665878
 gcLow = -0.2026259
 
+
 def calculate_on_target_scores(seqs: List[str]) -> pd.DataFrame:
     scores = []
     for seq in seqs:
@@ -139,18 +140,20 @@ def calculate_on_target_scores(seqs: List[str]) -> pd.DataFrame:
                 score += weight
         Score = 1.0 / (1.0 + math.exp(-score))
         scores.append((seq, Score))
-    
+
     # Create a DataFrame for the results
     on_target_scores_df = pd.DataFrame(scores, columns=['sequence', 'score'])
-    on_target_scores_df['score'] = on_target_scores_df['score'].round(3)*100
+    on_target_scores_df['score'] = on_target_scores_df['score'].round(3) * 100
     return on_target_scores_df
 
-#Everything below is in relation to off target scoring
+
+# Everything below is in relation to off target scoring
 def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description='Calculates CFD score')
     parser.add_argument('--wt', type=str, required=True, help='WT 23mer sgRNA sequence')
     parser.add_argument('--off', type=str, required=True, help='Off-target 23mer sgRNA sequence')
     return parser
+
 
 # Reverse complements a given string
 def revcom(s: str) -> str:
@@ -159,7 +162,8 @@ def revcom(s: str) -> str:
     return ''.join(letters)
 
 
-def calculate_off_target_scores(wt_sequences: List[str], sg_sequences: List[str], pam_sequences: List[str]) -> pd.DataFrame:
+def calculate_off_target_scores(wt_sequences: List[str], sg_sequences: List[str],
+                                pam_sequences: List[str]) -> pd.DataFrame:
     scores = []
     for wt, sg, pam in zip(wt_sequences, sg_sequences, pam_sequences):
         score = 1.0
@@ -172,7 +176,7 @@ def calculate_off_target_scores(wt_sequences: List[str], sg_sequences: List[str]
             if wt_list[i] == sl:
                 score *= 1
             else:
-                key = f'r{wt_list[i]}:d{revcom(sl)},{i+1}'
+                key = f'r{wt_list[i]}:d{revcom(sl)},{i + 1}'
                 score *= mismatch_scores.get(key, 1.0)
 
         score *= pam_scores.get(pam, 1.0)
@@ -180,17 +184,18 @@ def calculate_off_target_scores(wt_sequences: List[str], sg_sequences: List[str]
 
     # Create a DataFrame for the results
     cfd_scores_df = pd.DataFrame(scores, columns=['spacer', 'protospacer', 'pam', 'score'])
-    
+
     return cfd_scores_df
+
 
 # from rs3.seq import predict_seq
 
 # def calcRs3Scores(seqs: List[str]) -> pd.DataFrame:
-#     """ 
+#     """
 #     Calculate Doench RuleSet 3 (RS3) scores.
 #     This function assumes the `predict_seq` function from the `rs3` package.
-    
-#     Input: 
+
+#     Input:
 #     - seqs: List of 30mer sequences, including 4bp 5', 20bp guide, 3bp PAM, 3bp 3'
 
 #     Output:
@@ -202,11 +207,11 @@ def calculate_off_target_scores(wt_sequences: List[str], sg_sequences: List[str]
 #         if "N" in s or "n" in s:
 #             s = s.replace("N", "A").replace("n", "A")
 #         newSeqs.append(s)
-    
+
 #         scores = predict_seq(newSeqs, sequence_tracr='Hsu2013')
 #         newScores = [int(100.0 * s)/2 for s in scores]
-    
-      
+
+
 #     return newScores
 
 def calculate_on_target_scores(seqs: List[str]) -> pd.DataFrame:
@@ -227,9 +232,8 @@ def calculate_on_target_scores(seqs: List[str]) -> pd.DataFrame:
                 score += weight
         Score = 1.0 / (1.0 + math.exp(-score))
         scores.append((seq, Score))
-    
+
     # Create a DataFrame for the results
     on_target_scores_df = pd.DataFrame(scores, columns=['sequence', 'score'])
-    on_target_scores_df['score'] = on_target_scores_df['score'].round(3)*100
+    on_target_scores_df['score'] = on_target_scores_df['score'].round(3) * 100
     return on_target_scores_df
-

@@ -1,0 +1,72 @@
+name: editable-rs3
+channels:
+  - conda-forge
+  - defaults
+channel_priority: strict
+dependencies:
+  - biopython=1.85
+  - bzip2=1.0.8
+  - ca-certificates=2025.8.3
+  - colorama=0.4.6
+  - expat=2.7.1
+  - icu=75.1
+  - joblib=1.5.2
+  - libblas=3.9.0
+  - libcblas=3.9.0
+  - libcxx=20.1.8
+  - libexpat=2.7.1
+  - libffi=3.4.4
+  - libgfortran=15.1.0
+  - libgfortran5=15.1.0
+  - liblapack=3.9.0
+  - liblzma=5.8.1
+  - liblzma-devel=5.8.1
+  - libopenblas=0.3.30
+  - libsqlite=3.50.4
+  - libzlib=1.3.1
+  - lightgbm=3.3.5
+  - llvm-openmp=20.1.8
+  - ncurses=6.5
+  - numpy=2.3.2
+  - openssl=3.5.2
+  - pandas=2.3.2
+  - python=3.11.11
+  - python-dateutil=2.9.0.post0
+  - python-tzdata=2025.2
+  - python_abi=3.11
+  - pytz=2025.2
+  - readline=8.3
+  - scikit-learn=1.7.1
+  - scipy=1.16.1
+  - setuptools=78.1.1
+  - six=1.17.0
+  - sqlite=3.50.4
+  - threadpoolctl=3.6.0
+  - tk=8.6.13
+  - tqdm=4.67.1
+  - tzdata=2025b
+  - wheel=0.45.1
+  - xz=5.8.1
+  - xz-gpl-tools=5.8.1
+  - xz-tools=5.8.1
+  - zlib=1.3.1
+  - python=3.11
+  - lightgbm=3.3.5
+  - numpy
+  - pandas
+  - scikit-learn
+  - scipy
+  - biopython
+  - tqdm
+  - joblib
+  - uvicorn
+  - fastapi
+  - pip
+  - pip:
+      - pip==25.2
+      - rs3==0.0.16
+      - seqfold==0.9.0
+      - sglearn==1.2.5
+
+      
+prefix: /Users/juliet/miniconda3/envs/editable-rs3

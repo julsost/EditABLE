@@ -8,6 +8,90 @@ from itertools import combinations
 import numpy as np
 from calculate_scores import calculate_on_target_scores, calculate_off_target_scores
 
+import sys, json, os
+
+
+
+
+def _is_pyodide() -> bool:
+    try:
+        return (sys.platform == "emscripten") or ("pyodide" in sys.modules)
+    except Exception:
+        return False
+
+IS_PYODIDE = _is_pyodide()
+
+# Try native RS3 (works in your conda/server env, fails in Pyodide)
+_RS3_AVAILABLE = False
+rs3_predict_seq = None
+if not IS_PYODIDE:
+    try:
+        from rs3.seq import predict_seq as rs3_predict_seq
+        _RS3_AVAILABLE = True
+        print("[RS3] native available")
+    except Exception as _e:
+        print(f"[RS3] native unavailable: {_e}")
+        _RS3_AVAILABLE = False
+
+# Try an embedded Python dict cache (works in Pyodide & native)
+_RS3_CACHE = {}
+try:
+    from rs3_cache import RS3_CACHE as _EMBEDDED_RS3_CACHE
+    if isinstance(_EMBEDDED_RS3_CACHE, dict):
+        _RS3_CACHE = _EMBEDDED_RS3_CACHE
+        print(f"[RS3] embedded cache loaded: {len(_RS3_CACHE)} items")
+except Exception as _e:
+    print("[RS3] no embedded cache (abs):", _e)
+
+if not _RS3_CACHE:
+    try:
+        from .rs3_cache import RS3_CACHE as _EMBED_REL  # type: ignore
+        if isinstance(_EMBED_REL, dict):
+            _RS3_CACHE = _EMBED_REL
+            print(f"[RS3] embedded cache loaded (rel): {len(_RS3_CACHE)} items")
+    except Exception as _e:
+        print("[RS3] no embedded cache (rel):", _e)
+
+# Last resort: try reading a JSON file (may not work in Pyodide)
+if not _RS3_CACHE:
+    for p in ("www/rs3_cache.json", "rs3_cache.json"):
+        try:
+            with open(p) as f:
+                _RS3_CACHE = json.load(f)
+                print(f"[RS3] file cache loaded from {p}: {len(_RS3_CACHE)} items")
+                break
+        except Exception:
+            pass
+
+def _sigmoid(x: float) -> float:
+    import math
+    return 1.0 / (1.0 + math.exp(-float(x)))
+
+_RS3_CFG = {}
+try:
+    from rs3_config import RS3_CONFIG as _EMBED_CFG
+    if isinstance(_EMBED_CFG, dict):
+        _RS3_CFG = _EMBED_CFG
+        print(f"[RS3] embedded config loaded: api_base={_RS3_CFG.get('api_base')}")
+except Exception as _e:
+    print("[RS3] no embedded config:", _e)
+
+# Optional hardcoded fallback (safety net)
+_API_BASE_DEFAULT = _RS3_CFG.get("api_base") or ""
+if not _RS3_CFG.get("api_base") and _API_BASE_DEFAULT:
+    _RS3_CFG["api_base"] = _API_BASE_DEFAULT
+
+
+
+
+try:
+    from rs3.seq import predict_seq as rs3_predict_seq
+    _RS3_AVAILABLE = True
+    print("running rs3_predict_seq")
+except Exception:
+    rs3_predict_seq = None
+    _RS3_AVAILABLE = False
+
 
 bases = {"A", "C", "G", "T"}
 
@@ -18,7 +102,98 @@ pam_length = None
 PAMs = None
 reverse_PAMs = None
 
-print("hi")
+
+# --- RS3 API sync helper (works in Pyodide without async/await) ---
+def _rs3_api_call_sync(seqs, tracr="Hsu2013"):
+    """
+    Calls the RS3 FastAPI endpoint defined in _RS3_CFG['api_base'] using a
+    synchronous XMLHttpRequest via Pyodide's JS bridge. Returns a list of floats
+    aligned to `seqs` (percent values if the server is configured that way).
+    """
+    try:
+        import json as _json
+        from js import XMLHttpRequest  # Pyodide bridge to the browser XHR
+    except Exception as e:
+        print("[RS3] JS/XHR unavailable in this environment:", e)
+        return None
+
+    api = _RS3_CFG.get("api_base")
+    if not api:
+        print("[RS3] No API base configured in rs3_config.json")
+        return None
+
+    body = _json.dumps({
+        "sequences": [s or "" for s in seqs],
+        "tracr": tracr,
+        "as_percent": True
+    })
+
+    try:
+        req = XMLHttpRequest.new()
+        # third arg 'False' => synchronous request
+        req.open("POST", api, False)
+        req.setRequestHeader("Content-Type", "application/json")
+        req.send(body)
+
+        if int(req.status) != 200:
+            print(f"[RS3] API HTTP {req.status}: {req.responseText}")
+            return None
+
+        data = _json.loads(req.responseText)
+        scores = data.get("scores", [])
+        return [float(x) if x is not None else None for x in scores]
+    except Exception as e:
+        print("[RS3] Sync API call failed:", e)
+        return None
+
+
+def calc_rs3_scores(context_30mers, tracr="Hsu2013"):
+    """
+    Returns RS3 scores as PERCENT values (0–100, rounded to 2 decimals),
+    aligned to `context_30mers`.
+
+    Resolution order:
+      1) Native RS3 (server/local env)
+      2) Browser API via synchronous XHR (Pyodide)
+      3) Precomputed cache (_RS3_CACHE)
+      4) Nones
+    """
+    if not context_30mers:
+        return []
+
+    # Normalize: uppercase strings, preserve None for alignment
+    seqs = [str(s).upper() if s is not None else None for s in context_30mers]
+
+    # 1) Native (server/local conda)
+    if _RS3_AVAILABLE and rs3_predict_seq is not None:
+        try:
+            raw = rs3_predict_seq(seqs, sequence_tracr=tracr)
+            import math
+            probs = [1.0 / (1.0 + math.exp(-float(x))) if x is not None else None for x in raw]
+            out = [round(p * 100.0, 2) if p is not None else None for p in probs]
+            print(f"[RS3] native computed {len(out)} scores")
+            return out
+        except Exception as e:
+            print("[RS3] native error, will try API/cache:", e)
+
+    # 2) Browser (Pyodide): call API synchronously (no await)
+    if IS_PYODIDE:
+        out = _rs3_api_call_sync(seqs, tracr=tracr)
+        if out is not None:
+            print(f"[RS3] API returned {len(out)} scores")
+            return out
+
+    # 3) Cache fallback (precomputed values for static builds)
+    if _RS3_CACHE:
+        out = [_RS3_CACHE.get(s) if s is not None else None for s in seqs]
+        print("[RS3] returning cache values; first 5:", out[:5])
+        return out
+
+    # 4) Nothing available
+    print("[RS3] no native/API/cache available; returning blanks")
+    return [None] * len(seqs)
+
+
 
 # helper function to find be guide rnas, pams, and 30 nt sequence
 def find_BE_guide_rnas(direction, seq, genomic_location, edit_start, edit_end):
@@ -659,6 +834,7 @@ def add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequen
     df_dict['Base Editing Guide'].append(None)
     df_dict['Off Target Score'].append(None)
     df_dict['On Target Score'].append(None)
+    df_dict['RS3 Probability (%)'].append(None)
     df_dict['Bystander Edits?'].append(None)
     df_dict['pegRNA Annotation'].append(None)
     df_dict['pegRNA PBS'].append(None)
@@ -680,6 +856,7 @@ def update_df_dict_with_primedesign_output(df_dict, ref_sequence_original, edite
     df_dict['Original Sequence'].append(ref_sequence_original)
     df_dict['Desired Sequence'].append(edited_sequence_original)
     df_dict['Editing Technology'].append(editing_technology)
+    df_dict['RS3 Probability (%)'].append(None)
     df_dict['pegRNA Annotation'].append(peg_annotation_recommended)
     df_dict['pegRNA PBS'].append(peg_pbs_recommended)
     df_dict['pegRNA RTT'].append(peg_rtt_recommended)
@@ -703,7 +880,10 @@ def render_dataframe(df_dict):
             df_dict[key].append(None)
         df_dict_render[key] = df_dict[key]
 
-    df_render = pd.DataFrame.from_dict(df_dict_render).dropna(how='all', axis=1)
+    df_render = pd.DataFrame.from_dict(df_dict_render)
+    all_nan_cols = [c for c in df_render.columns if df_render[c].isna().all() and c != 'RS3 Probability (%)']
+    if all_nan_cols:
+            df_render = df_render.drop(columns=all_nan_cols)
     df_full = pd.DataFrame.from_dict(df_dict).dropna(how='all', axis=1)
 
     # Drop the 'Base Editing Guide Orientation' column if it exists
@@ -845,7 +1025,7 @@ def _pdel_update_df_dict(df_dict: dict, ref_sequence_original: str, edited_seque
         df_dict['Original Sequence'].append(ref_sequence_original)
         df_dict['Desired Sequence'].append(edited_sequence_original)
         df_dict['Editing Technology'].append('Prime-Del')
-
+        df_dict['Prime-Del Notes'].append(note if note else '—')
         df_dict['Prime-Del peg1 Spacer'].append(rna1)
         df_dict['Prime-Del peg1 Extension (Homology+PBS)'].append(ext1)
         df_dict['Prime-Del peg1 Nick'].append(nick1)
@@ -856,17 +1036,16 @@ def _pdel_update_df_dict(df_dict: dict, ref_sequence_original: str, edited_seque
 
         df_dict['Prime-Del Deletion Size (bp)'].append(int(dels))
         df_dict['Prime-Del Expected Product'].append(expected)
-        df_dict['Prime-Del Notes'].append(note if note else '—')
+
 # ========= End Prime-del port ================================================
 
 
 
 def get_guides(ref_sequence_original, edited_sequence_original, PAM, edit_start=4, edit_end=9):
-    print("in get guides")
     def process_guide_rnas_for_pam(guide_rnas, sequences, ref_sequence_original, edited_sequence_original, df_dict,
                                    ref_sequence, edited_sequence, substitution_position, orientation, pam):
         if guide_rnas == "NO PAM":
-            return False  # Indicates that the next PAM should be tried
+            return False  # try the next PAM
         elif guide_rnas == "NOT BASE EDITABLE":
             primedesign_output = run_prime_design(ref_sequence, edited_sequence, substitution_position)
             if primedesign_output != "No PrimeDesign Recommended Guides":
@@ -875,23 +1054,41 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM, edit_start=
             else:
                 add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original,
                                                "No Base or Prime Editing Guides Found")
-            return True  # Indicates that further processing is complete
+            return True  # done
         else:
-            protospacers = generate_mutations_to_single_base(guide_rnas)
+            # Off-target averages per guide
             try:
-                combined_scores, average_scores = calculate_off_target_scores_for_guides(guide_rnas,
-                                                                                         [pam] * len(guide_rnas))
+                combined_scores, average_scores = calculate_off_target_scores_for_guides(
+                    guide_rnas, [pam] * len(guide_rnas)
+                )
             except Exception as e:
                 print(f"Error in calculate_off_target_scores: {e}")
                 print(f"Guide RNAs: {guide_rnas}")
                 combined_scores, average_scores = pd.DataFrame(), pd.DataFrame()
 
+            # On-target (your existing scorer)
             on_target_scores_df = calculate_on_target_scores(sequences)
-            # rs3_scores = calcRs3Scores(sequences) if calculate_rs3 else [None] * len(sequences)
+            rs3_scores = calc_rs3_scores(sequences, tracr="Hsu2013")
 
+            # RS3 (Doench Rule Set 3) sequence model on the same 30-mer contexts
+            # Choose tracrRNA here: "Hsu2013" (common) or "Chen2013"
+
+
+            # Normalize shapes and iterate
             if not isinstance(guide_rnas, list):
                 guide_rnas = [guide_rnas]
-            for gRNA, cfd_score, on_score in zip(guide_rnas, average_scores['score'], on_target_scores_df['score']):
+
+            # Guard against missing score frames
+            cfd_list = list(average_scores['score']) if 'score' in average_scores else [None] * len(guide_rnas)
+            on_list = list(on_target_scores_df['score']) if 'score' in on_target_scores_df else [None] * len(guide_rnas)
+
+            # zip across all three score lists
+            for gRNA, cfd_score, on_score, rs3 in zip(
+                    guide_rnas,
+                    average_scores['score'],
+                    on_target_scores_df['score'],
+                    rs3_scores
+            ):
                 position_info = track_positions(gRNA, ref_sequence_original, substitution_position, orientation,
                                                 edit_start, edit_end)
 
@@ -901,10 +1098,20 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM, edit_start=
                 df_dict['Base Editing Guide'].append(str(gRNA))
                 df_dict['Base Editing Guide Orientation'].append(orientation)
                 df_dict['PAM'].append(pam)
-                #df_dict['Off Target Score (Click To Toggle)'].append(cfd_score)
-                #df_dict['On Target Score (Click To Toggle)'].append(on_score)
-                # df_dict['RuleSet3 Score'].append(rs3)
-                #df_dict['Bystander Edits?'].append(position_info)
+
+
+
+                df_dict['Off Target Score'].append(float(cfd_score) if cfd_score is not None else None)
+                df_dict['On Target Score'].append(float(on_score) if on_score is not None else None)
+
+
+                df_dict['RS3 Probability (%)'].append(
+                    100 * float(rs3) if rs3 is not None else None
+                )
+
+                df_dict['Bystander Edits?'].append(position_info)
+
+                # Prime-editing columns stay None for base-edit rows
                 df_dict['pegRNA Annotation'].append(None)
                 df_dict['pegRNA PBS'].append(None)
                 df_dict['pegRNA RTT'].append(None)
@@ -913,6 +1120,7 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM, edit_start=
                 df_dict['pegRNA Extension Oligo Bottom'].append(None)
                 df_dict['ngRNA Annotation'].append(None)
                 df_dict['ngRNA Oligo Top'].append(None)
+
             return True
 
     def handle_base_editing(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original,

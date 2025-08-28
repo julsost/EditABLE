@@ -1,0 +1,17 @@
+biopython @ file:///Users/runner/miniforge3/conda-bld/biopython_1737241778472/work
+colorama @ file:///home/conda/feedstock_root/build_artifacts/colorama_1733218098505/work
+joblib @ file:///home/conda/feedstock_root/build_artifacts/joblib_1756321760188/work
+lightgbm @ file:///Users/runner/miniforge3/conda-bld/lightgbm_1674563499193/work
+numpy @ file:///Users/runner/miniforge3/conda-bld/bld/rattler-build_numpy_1756343068/work/dist/numpy-2.3.2-cp311-cp311-macosx_11_0_arm64.whl#sha256=dda48a794213390372a893c912c90a1cb399103451aebd8d4ad2613456b8561f
+pandas @ file:///Users/runner/miniforge3/conda-bld/pandas_1755779020151/work
+python-dateutil @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_python-dateutil_1751104122/work
+pytz @ file:///home/conda/feedstock_root/build_artifacts/pytz_1742920838005/work
+rs3==0.0.16
+scikit-learn @ file:///Users/runner/miniforge3/conda-bld/scikit-learn_1752825819344/work/dist/scikit_learn-1.7.1-cp311-cp311-macosx_11_0_arm64.whl#sha256=166a9f8931f7cd21e4087ea3fe1429e0c1943ec4d234ea3085d7ab3fc705afa6
+scipy @ file:///Users/runner/miniforge3/conda-bld/scipy-split_1754969186183/work/dist/scipy-1.16.1-cp311-cp311-macosx_11_0_arm64.whl#sha256=a12d24d59bb5e0a4f3bae6d1ab078c76a864c04e615325caf8e0db2d4f149b8c
+seqfold==0.9.0
+sglearn==1.2.5
+six @ file:///home/conda/feedstock_root/build_artifacts/bld/rattler-build_six_1753199211/work
+threadpoolctl @ file:///home/conda/feedstock_root/build_artifacts/threadpoolctl_1741878222898/work
+tqdm @ file:///home/conda/feedstock_root/build_artifacts/tqdm_1735661334605/work
+tzdata @ file:///home/conda/feedstock_root/build_artifacts/python-tzdata_1742745135198/work
