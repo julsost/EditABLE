@@ -1014,10 +1014,10 @@ def _pdel_update_df_dict(df_dict: dict, ref_sequence_original: str, edited_seque
 
         # Ensure the df_dict keys exist before appending
         for k in [
-            'Original Sequence', 'Desired Sequence', 'Editing Technology',
+            'Original Sequence', 'Desired Sequence', 'Editing Technology', 'Prime-Del Notes',
             'Prime-Del peg1 Spacer', 'Prime-Del peg1 Extension (Homology+PBS)', 'Prime-Del peg1 Nick',
             'Prime-Del peg2 Spacer', 'Prime-Del peg2 Extension (Homology+PBS)', 'Prime-Del peg2 Nick',
-            'Prime-Del Deletion Size (bp)', 'Prime-Del Expected Product', 'Prime-Del Notes'
+            'Prime-Del Deletion Size (bp)', 'Prime-Del Expected Product'
         ]:
             df_dict.setdefault(k, [])
 

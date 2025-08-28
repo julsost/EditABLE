@@ -1602,21 +1602,48 @@ def server(input, output, session):
 
         guides_df = pd.concat(dfs_to_merge_download)
 
-        ui_elements = [
-            ui.help_text(
-                '''Note: for base editing, we will show multiple guide RNAs, but for prime editing, we will only show the recommended PrimeDesign guide RNA. The off-target score is calculated using the CFD score algorithm (Doench et al. 2014) where a higher score indicates a lower likelihood of off-target activity. The on-target score is calculated using the RuleSet3 algorithm where a higher score indicates greater efficiency of guide RNA binding to the genomic target sequence. Both algorithms are from ''',
-                ui.tags.a('Doench et al. 2014 Nat Biotechnol.',
-                          {'href': 'https://pubmed.ncbi.nlm.nih.gov/25184501/', 'target': '_blank'}),
-                ui.tags.a('Doench et al. 2014 Nat Biotechnol.',
-                          {'href': 'https://pubmed.ncbi.nlm.nih.gov/25184501/', 'target': '_blank'}),
-                ui.tags.b(" A higher score is better for both algorithms.", style="text-decoration: bold")
-            ),
-            ui.br(),
-            ui.br(),
-            ui.output_data_frame("render_Results"),
-            ui.br(),
-            ui.br(),
-        ]
+        ui.help_text(
+            ui.tags.div(
+                [
+                    ui.tags.p(
+                        "Note: For base editing, multiple guide RNAs will be shown. "
+                        "For prime editing, only the recommended PrimeDesign guide RNA will be shown."
+                    ),
+                    ui.tags.p(
+                        [
+                            "The off-target score is calculated using the CFD score algorithm ",
+                            ui.tags.a(
+                                "Doench et al. 2014, Nat Biotechnol.",
+                                {
+                                    "href": "https://pubmed.ncbi.nlm.nih.gov/25184501/",
+                                    "target": "_blank",
+                                },
+                            ),
+                            ", where a higher score indicates a lower likelihood of off-target activity."
+                        ]
+                    ),
+                    ui.tags.p(
+                        [
+                            "The on-target score is calculated using the RuleSet3 algorithm ",
+                            ui.tags.a(
+                                "DeWeirdt et al. 2022, Nat Commun.",
+                                {
+                                    "href": "https://www.nature.com/articles/s41467-022-28582-5",
+                                    "target": "_blank",
+                                },
+                            ),
+                            ", where a higher score indicates greater efficiency of guide RNA binding."
+                        ]
+                    ),
+                    ui.tags.p(
+                        ui.tags.b("A higher score is better for both algorithms.")
+                    ),
+                ]
+            )
+        ),
+        ui.br(),
+        ui.output_data_frame("render_Results"),
+        ui.br(),
 
         ui_elements.append(ui.download_button("download_Results", "Download Results as CSV File"))
 
@@ -1745,13 +1772,47 @@ def server(input, output, session):
         if "Base Editing" in filtered_guides_df['Editing Technology'].values:
             guide_title = "Recommended Base Editing Guide RNAs"
             help_text = ui.help_text(
-                '''Note: Multiple guide RNAs are shown with the ability to toggle based on optimal on-target and off-target scoring. The off-target score is calculated using the CFD score algorithm where a higher score indicates a lower likelihood of off-target activity. The on-target score is calculated using the RuleSet1 algorithm where a higher score indicates greater efficiency of guide RNA binding to the genomic target sequence. For additional information on these algorithms, please see the original publications ''',
-                ui.tags.a('Doench et al. 2014 Nat Biotechnol.',
-                          {'href': 'https://pubmed.ncbi.nlm.nih.gov/25184501/', 'target': '_blank'}),
-                ui.tags.a('DeWeirdt et al. 2022 Nature Communications',
-                          {'href': 'https://www.nature.com/articles/s41467-022-33024-2', 'target': '_blank'}),
-                ui.tags.b(" A higher score is better for both algorithms.", style="text-decoration: bold")
-            )
+                ui.tags.div(
+                    [
+                        ui.tags.p(
+                            "Note: For base editing, multiple guide RNAs will be shown. "
+                            "For prime editing, only the recommended PrimeDesign guide RNA will be shown."
+                        ),
+                        ui.tags.p(
+                            [
+                                "The off-target score is calculated using the CFD score algorithm ",
+                                ui.tags.a(
+                                    "Doench et al. 2014, Nat Biotechnol.",
+                                    {
+                                        "href": "https://pubmed.ncbi.nlm.nih.gov/25184501/",
+                                        "target": "_blank",
+                                    },
+                                ),
+                                ", where a higher score indicates a lower likelihood of off-target activity."
+                            ]
+                        ),
+                        ui.tags.p(
+                            [
+                                "The on-target score is calculated using the RuleSet3 algorithm ",
+                                ui.tags.a(
+                                    "DeWeirdt et al. 2022, Nat Commun.",
+                                    {
+                                        "href": "https://www.nature.com/articles/s41467-022-33024-2",
+                                        "target": "_blank",
+                                    },
+                                ),
+                                ", where a higher score indicates greater efficiency of guide RNA binding."
+                            ]
+                        ),
+                        ui.tags.p(
+                            ui.tags.b("A higher score is better for both algorithms.")
+                        ),
+                    ]
+                )
+            ),
+            ui.br(),
+            ui.output_data_frame("render_Results"),
+            ui.br(),
             ui_elements.append(
                 ui_card(
                     guide_title,
