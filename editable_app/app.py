@@ -608,7 +608,7 @@ def generate_prime_protocols_section(guides_df):
                     ui.help_text(
                         ui.tags.span("2. Follow Cloning Protocol here for "),
                         ui.tags.a("ngRNA plasmid.",
-                                  href="https://drive.google.com/file/d/1RBkiXhl7CCKxHuDNkaogvjkEykxkH4ws/view?usp=sharing",
+                                  href="https://storage.googleapis.com/cloning-protocol/EditABLE%20cloning%20protocol.pdf",
                                   target="_blank"),
                     ),
                 ])
@@ -694,7 +694,7 @@ def generate_twin_prime_protocols_section(guides_df):
                     ui.help_text(
                         ui.tags.span("2. Follow Cloning Protocol here for "),
                         ui.tags.a("ngRNA plasmid.",
-                                  href="https://drive.google.com/file/d/1RBkiXhl7CCKxHuDNkaogvjkEykxkH4ws/view?usp=sharing",
+                                  href="https://storage.googleapis.com/cloning-protocol/EditABLE%20cloning%20protocol.pdf",
                                   target="_blank"),
                     ),
                 ])
@@ -959,7 +959,7 @@ def generate_experimental_validation_section(guides_df, pam_type):
         ui.help_text(
             ui.tags.span("2. Follow Cloning Protocol "),
             ui.tags.a("here.",
-                      href="https://drive.google.com/file/d/1RBkiXhl7CCKxHuDNkaogvjkEykxkH4ws/view?usp=sharing",
+                      href="https://storage.googleapis.com/cloning-protocol/EditABLE%20cloning%20protocol.pdf",
                       target="_blank"),
         ),
     ])
