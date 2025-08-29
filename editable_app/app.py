@@ -576,7 +576,7 @@ def generate_prime_protocols_section(guides_df):
             ui.br(),
             ui.br(),
             ui.tags.span("3. Follow Cloning Protocol here for "),
-            ui.tags.a("pegRNA plasmid.", href="https://drive.google.com/file/d/1kKD7EVwS7nZMbiZ6UH4LftK7GepoS8si/view",
+            ui.tags.a("pegRNA plasmid.", href="https://storage.googleapis.com/cloning-protocol-pegrna/Protocol%20for%20pU6-tevopreq1-GG-acceptor.pdf",
                       target="_blank"),
         ),
     ])
@@ -662,7 +662,7 @@ def generate_twin_prime_protocols_section(guides_df):
             ui.br(),
             ui.br(),
             ui.tags.span("3. Follow Cloning Protocol here for "),
-            ui.tags.a("pegRNA plasmid.", href="https://drive.google.com/file/d/1kKD7EVwS7nZMbiZ6UH4LftK7GepoS8si/view",
+            ui.tags.a("pegRNA plasmid.", href="https://storage.googleapis.com/cloning-protocol-pegrna/Protocol%20for%20pU6-tevopreq1-GG-acceptor.pdf",
                       target="_blank"),
         ),
     ])
@@ -1860,7 +1860,7 @@ def server(input, output, session):
                 "please visit the ",
                 ui.tags.a(
                     "PrimeDesign portal",
-                    {"href": "https://prime-design-766275861038.us-east1.run.app/", "target": "_blank"}
+                    {"href": "https://prime-design-222753790581.us-east4.run.app", "target": "_blank"}
                 ),
                 " or see the original publication ",
                 ui.tags.a(
