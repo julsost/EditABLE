@@ -1015,8 +1015,8 @@ def _pdel_update_df_dict(df_dict: dict, ref_sequence_original: str, edited_seque
         # Ensure the df_dict keys exist before appending
         for k in [
             'Original Sequence', 'Desired Sequence', 'Editing Technology', 'Prime-Del Notes',
-            'Prime-Del peg1 Spacer', 'Prime-Del peg1 Extension (Homology+PBS)', 'Prime-Del peg1 Nick',
-            'Prime-Del peg2 Spacer', 'Prime-Del peg2 Extension (Homology+PBS)', 'Prime-Del peg2 Nick',
+            'Prime-Del peg1 Spacer (RNA_1)', 'Prime-Del peg1 Extension (Homology+PBS_1)', 'Prime-Del peg1 Nick (nick_1)',
+            'Prime-Del peg2 Spacer (gRNA_2)', 'Prime-Del peg2 Extension (Homology+PBS_2)', 'Prime-Del peg2 Nick (nick_2)',
             'Prime-Del Deletion Size (bp)', 'Prime-Del Expected Product'
         ]:
             df_dict.setdefault(k, [])
@@ -1026,13 +1026,13 @@ def _pdel_update_df_dict(df_dict: dict, ref_sequence_original: str, edited_seque
         df_dict['Desired Sequence'].append(edited_sequence_original)
         df_dict['Editing Technology'].append('Prime-Del')
         df_dict['Prime-Del Notes'].append(note if note else '—')
-        df_dict['Prime-Del peg1 Spacer'].append(rna1)
-        df_dict['Prime-Del peg1 Extension (Homology+PBS)'].append(ext1)
-        df_dict['Prime-Del peg1 Nick'].append(nick1)
+        df_dict['Prime-Del peg1 Spacer (RNA_1)'].append(rna1)
+        df_dict['Prime-Del peg1 Extension (Homology+PBS_1)'].append(ext1)
+        df_dict['Prime-Del peg1 Nick (nick_1)'].append(nick1)
 
-        df_dict['Prime-Del peg2 Spacer'].append(rna2)
-        df_dict['Prime-Del peg2 Extension (Homology+PBS)'].append(ext2)
-        df_dict['Prime-Del peg2 Nick'].append(nick2)
+        df_dict['Prime-Del peg2 Spacer (gRNA_2)'].append(rna2)
+        df_dict['Prime-Del peg2 Extension (Homology+PBS_2)'].append(ext2)
+        df_dict['Prime-Del peg2 Nick (nick_2)'].append(nick2)
 
         df_dict['Prime-Del Deletion Size (bp)'].append(int(dels))
         df_dict['Prime-Del Expected Product'].append(expected)

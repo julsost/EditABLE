@@ -93,28 +93,24 @@ ui.div(
         " at vbhalla@stanford.edu"
     ),
     ui.br(),
+    ui.help_text(
+        '''EditABLE is currently pending publication, please see our manuscript pre-print for more information on the algorithm at: ''',
+        ui.tags.a("Research Square", {'href': 'https://doi.org/10.21203/rs.3.rs-4775705/v1', 'target': '_blank'}),
+    ),
+    ui.br(),
     ui.br(),
     ui_card(
         "How to use this app",
         "how_to_app",
-        ui.help_text(
-            '''In CRISPR editing experiments, one is trying to induce some change in a DNA sequence.
-             Therefore, you have an original sequence you are trying to change and a desired sequence 
-             (what you want your sequence to look like after the CRISPR edit).'''
-        ),
-        ui.br(),
-        ui.br(),
         ui.help_text("There are two ways to use this app:"),
-        ui.br(),
         ui.br(),
         ui.help_text(
             '''1. If you want to find guides for a single CRISPR edit. For this use case, please enter 
             in your original sequence and desired sequence in their respective input boxes.'''
         ),
         ui.br(),
-        ui.br(),
         ui.help_text(
-            '''2. If you have more than one CRISPR edit you want to make, you can upload a CSV file with 
+            '''2. If you have more than one CRISPR edit, you can upload a CSV file with 
             two columns, named "Original Sequence" and "Desired Sequence" that contain your original and 
             desired sequences, with each row representing one edit you would like to make. Then click the 
             blue "Upload File" button even if the progress bar under the file browser says "Upload complete"'''
@@ -122,13 +118,11 @@ ui.div(
         ui.br(),
         ui.br(),
         ui.help_text(
-            '''After specifing your input, click the "Find Guides" button and editABLE will try to find CRISPR 
-            guides that will induce your desired edits. Once editABLE finishes running, a table will appear 
-            displaying either the guides that editABLE has found for each of your desired edits or a suggestion to 
-            use an alternative CRISPR technology if base or prime editing guides can't be found. Lastly, you can 
-            download a CSV of the guides found by editABLE by clicking on the "Download Results as CSV File" 
-            button. Base editing reagents will be suggested first due to their higher reported editing efficiency. 
-            If a base editing guide cannot be found, we will then provide suggested prime editing reagents if possible.'''
+            '''After specifying your input, click the "Find Guides" button and EditABLE will try to find CRISPR guides to 
+            induce your desired edits. Once EditABLE finishes running, a table will appear displaying the guides that EditABLE 
+            has found for each of your desired edits. You can download a CSV of the guides found by EditABLE by clicking 
+            on the "Download Results as CSV File" button.
+            '''
         )
     ),
 
@@ -215,27 +209,18 @@ ui.div(
         ),
         ui.br(),
         ui.br(),
+    
         ui.help_text(
-            ui.tags.span(
-                "Please limit the length of the insertion or deletion to less than 40 nucleotides as prime editors have been primarily tested in this context. Refer to  "),
-            ui.tags.a("Anzalone et al. 2019 Nature", href="https://pubmed.ncbi.nlm.nih.gov/31634902/", target="_blank"),
-            ui.tags.span(" for more information.")
-        ),
-        ui.br(),
-        ui.br(),
-        ui.help_text(
-            '''Then, use the "Select Desired Base Editing PAM" dropdown to select the base editing PAM that is desired.'''
-        ),
-        ui.br(),
-        ui.br(),
-        ui.help_text(
-            '''Lastly, we require at least 25 base pairs of sequence to the left and right of your desired ''',
+            '''We require at least 25 base pairs of sequence to the left and right of your desired ''',
             ui.tags.b("edit", style="color: red"),
             '''. So in each of the examples above, there must be 25 or more base pairs to the right and left 
             of the ''',
             ui.tags.b("red", style="color: red"),
             ''' highlighted regions. '''
         )
+        
+    
+        
     ),
 
     ui_card(
@@ -245,7 +230,7 @@ ui.div(
             "Single Sequence",
             'single_sequence_input',
             ui.help_text(
-                "If you want to find guides for a single CRISPR edit. Please enter in your original sequence and desired sequence in their respective input boxes."
+                "If you want to find guides for a single CRISPR edit enter in your original sequence and desired sequence in their respective input boxes."
             ),
             ui.br(),
             ui.br(),
@@ -1376,9 +1361,7 @@ def server(input, output, session):
     # Define default values
     DEFAULT_BASE_EDITING_WINDOW_START = 4
     DEFAULT_BASE_EDITING_WINDOW_END = 9
-
-
-
+    
     # Function to get base editing window values
     def get_base_editing_window(mutation_type=None):
         if mutation_type == "CGB":
@@ -1606,10 +1589,6 @@ def server(input, output, session):
             ui.tags.div(
                 [
                     ui.tags.p(
-                        "Note: For base editing, multiple guide RNAs will be shown. "
-                        "For prime editing, only the recommended PrimeDesign guide RNA will be shown."
-                    ),
-                    ui.tags.p(
                         [
                             "The off-target score is calculated using the CFD score algorithm ",
                             ui.tags.a(
@@ -1635,9 +1614,7 @@ def server(input, output, session):
                             ", where a higher score indicates greater efficiency of guide RNA binding."
                         ]
                     ),
-                    ui.tags.p(
-                        ui.tags.b("A higher score is better for both algorithms.")
-                    ),
+                    ui.tags.p("A higher score is better for both algorithms.")
                 ]
             )
         ),
@@ -1775,10 +1752,6 @@ def server(input, output, session):
                 ui.tags.div(
                     [
                         ui.tags.p(
-                            "Note: For base editing, multiple guide RNAs will be shown. "
-                            "For prime editing, only the recommended PrimeDesign guide RNA will be shown."
-                        ),
-                        ui.tags.p(
                             [
                                 "The off-target score is calculated using the CFD score algorithm ",
                                 ui.tags.a(
@@ -1804,13 +1777,12 @@ def server(input, output, session):
                                 ", where a higher score indicates greater efficiency of guide RNA binding."
                             ]
                         ),
-                        ui.tags.p(
-                            ui.tags.b("A higher score is better for both algorithms.")
-                        ),
-                    ]
+                        ui.tags.p("A higher score is better for both algorithms."),
+                        ui.tags.p("Bystander edits are other nucleotides found in the predicted editing window which could simultaneously be edited.")
+                    ]   
                 )
             ),
-            ui.br(),
+
             ui.output_data_frame("render_Results"),
             ui.br(),
             ui_elements.append(
@@ -1818,7 +1790,6 @@ def server(input, output, session):
                     guide_title,
                     'guides_df',
                     help_text,
-                    ui.br(),
                     ui.output_data_frame("render_results")
                 )
             )
@@ -1846,6 +1817,7 @@ def server(input, output, session):
                     guide_title,
                     'guides_df',
                     help_text,
+                    ui.br(),
                     ui.br(),
                     ui.output_data_frame("render_results")
                 )
@@ -1898,6 +1870,7 @@ def server(input, output, session):
 
 
             ui_elements.append(help_text)
+            ui_elements.append(ui.br())
             ui_elements.append(explore_button)
             ui_elements.append(prime_iframe)
 
@@ -2019,6 +1992,8 @@ def server(input, output, session):
 
             # 3) tell the browser to hide iframes and restore button labels
             session.send_custom_message("resetPrimeToggle", None)
+
+    
 
         #_________________________________
         ui_elements.append(ui.download_button("download_results", "Download Results as CSV File"))
