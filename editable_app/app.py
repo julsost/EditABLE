@@ -1860,7 +1860,7 @@ def server(input, output, session):
                     style="width:100%; height:80vh; border:1px solid #ccc; border-radius:8px; display:none;",
                     id="prime_iframe",
                     title="PrimeDesign Portal",
-                    loading="lazy"
+                    loading="eager"
                 )
             )
 
