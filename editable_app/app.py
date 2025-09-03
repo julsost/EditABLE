@@ -94,8 +94,10 @@ ui.div(
     ),
     ui.br(),
     ui.help_text(
-        '''EditABLE is currently pending publication, please see our manuscript pre-print for more information on the algorithm at: ''',
-        ui.tags.a("Research Square", {'href': 'https://doi.org/10.21203/rs.3.rs-4775705/v1', 'target': '_blank'}),
+        '''EditABLE is currently pending publication, please see our manuscript pre-print ''',
+        ui.tags.a("here", {'href': 'https://doi.org/10.21203/rs.3.rs-4775705/v1', 'target': '_blank'}),
+        ''' for more information on the algorithm. '''
+
     ),
     ui.br(),
     ui.br(),
@@ -105,23 +107,22 @@ ui.div(
         ui.help_text("There are two ways to use this app:"),
         ui.br(),
         ui.help_text(
-            '''1. If you want to find guides for a single CRISPR edit. For this use case, please enter 
-            in your original sequence and desired sequence in their respective input boxes.'''
+            '''1. To find guides for a single CRISPR edit please enter your original sequence and desired sequence in 
+            their respective input boxes.'''
         ),
         ui.br(),
         ui.help_text(
-            '''2. If you have more than one CRISPR edit, you can upload a CSV file with 
-            two columns, named "Original Sequence" and "Desired Sequence" that contain your original and 
-            desired sequences, with each row representing one edit you would like to make. Then click the 
-            blue "Upload File" button even if the progress bar under the file browser says "Upload complete"'''
+            '''2. If you have more than one CRISPR edit, you can upload a CSV file with two columns, named "Original 
+            Sequence" and "Desired Sequence" that contain your original and desired sequences, with each row representing 
+            one edit you would like to make. Then click the blue "Upload File" button even if the progress bar under the 
+            file browser says "Upload complete"'''
         ),
         ui.br(),
         ui.br(),
         ui.help_text(
-            '''After specifying your input, click the "Find Guides" button and EditABLE will try to find CRISPR guides to 
-            induce your desired edits. Once EditABLE finishes running, a table will appear displaying the guides that EditABLE 
-            has found for each of your desired edits. You can download a CSV of the guides found by EditABLE by clicking 
-            on the "Download Results as CSV File" button.
+            '''After specifying your input, click the "Find Guides" button. Once EditABLE finishes running, a table will 
+            appear displaying the guides that EditABLE has found for each of your desired edits. You can download a CSV 
+            of the guides found by EditABLE by clicking on the "Download Results as CSV File" button.
             '''
         )
     ),
@@ -130,8 +131,7 @@ ui.div(
         "Input requirements",
         "input_recs",
         ui.help_text(
-            '''Your original sequence(s) and the desired sequence(s) must be the same length. Only single edits 
-            (SNV, insertion, deletion) are supported at this time. Only the following characters are allowed in the input
+            '''Your original sequence(s) and the desired sequence(s) must be the same length. Only the following characters are allowed in the input
             ("A", "C", "G", "T", "a", "c", "g", "t", "-"). All whitespace is allowed but will be removed before running our pipeline.
             Your sequences need to be from 5' to 3'.'''
         ),
@@ -1809,16 +1809,12 @@ def server(input, output, session):
                                         "(Choi, J., et al. 2021 Nat Biotech)",
                                         {"href": "https://www.nature.com/articles/s41587-021-01025-z", "target": "_blank"}
                                     ),
-                                    ui.br(),
-                                     "."
                                      )
             ui_elements.append(
                 ui_card(
                     guide_title,
                     'guides_df',
                     help_text,
-                    ui.br(),
-                    ui.br(),
                     ui.output_data_frame("render_results")
                 )
             )
