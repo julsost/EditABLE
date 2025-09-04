@@ -1554,12 +1554,15 @@ def server(input, output, session):
 
 
         # PrimeDesign embed card (reuses the same toggle + iframe ids used elsewhere)
-        prime_card = ui_card(
-            "Multiple SNVs, insertions, or deletions Detected",
+        prime_card = ui.div(
+            {"style": "max-width:1300px; margin:0 auto; padding:0 10px;"},
+            ui_card(
+            "Multiple SNVs, insertions, or deletions detected",
             "multi_snv_hint",
             ui.help_text(
-                "To make multiple edits please use the embedded PrimeDesign tool. "
-                "If the fields are blank, your edits may be too far apart"
+                "The inputs you provided contain more than one SNV, insertion or deletion. The EditABLE algorithm "
+                "recommends prime editing for these types of genomic edits and you can copy and paste directly into the "
+                "embedded PrimeDesign tool below to design your guide RNAs."
             ),
             ui.br(),
             ui.help_text("Copy & paste this into PrimeDesign:"),
@@ -1575,7 +1578,7 @@ def server(input, output, session):
                     style="width:100%; height:800px; border:1px solid #ccc; border-radius:6px;"
                 )
             ),
-        )
+        ))
 
         return ui.TagList(prime_card)
 
@@ -1901,6 +1904,7 @@ def server(input, output, session):
             if tech_hint is None:
                 if re.search(r"-{45,}", str(ref_sequence_input)) or re.search(r"-{45,}", str(edited_sequence_input)):
                     tech_hint = "Prime Editing (Creating a Bxb1 Site)"
+
 
             pd_notation = to_prime_design_notation(
                 str(ref_sequence_input),
