@@ -6,6 +6,7 @@ from Bio.SeqUtils import MeltingTemp as mt
 from math import log
 from itertools import combinations
 import numpy as np
+import difflib
 from calculate_scores import calculate_on_target_scores, calculate_off_target_scores
 
 import sys, json, os
@@ -28,7 +29,6 @@ if not IS_PYODIDE:
     try:
         from rs3.seq import predict_seq as rs3_predict_seq
         _RS3_AVAILABLE = True
-        print("[RS3] native available")
     except Exception as _e:
         print(f"[RS3] native unavailable: {_e}")
         _RS3_AVAILABLE = False
@@ -87,7 +87,6 @@ if not _RS3_CFG.get("api_base") and _API_BASE_DEFAULT:
 try:
     from rs3.seq import predict_seq as rs3_predict_seq
     _RS3_AVAILABLE = True
-    print("running rs3_predict_seq")
 except Exception:
     rs3_predict_seq = None
     _RS3_AVAILABLE = False
@@ -119,7 +118,6 @@ def _rs3_api_call_sync(seqs, tracr="Hsu2013"):
 
     api = _RS3_CFG.get("api_base")
     if not api:
-        print("[RS3] No API base configured in rs3_config.json")
         return None
 
     body = _json.dumps({
@@ -145,6 +143,110 @@ def _rs3_api_call_sync(seqs, tracr="Hsu2013"):
     except Exception as e:
         print("[RS3] Sync API call failed:", e)
         return None
+
+
+# --- PrimeDesign notation helper --------------------------------------------
+
+def to_prime_design_notation(ref_sequence: str,
+                             edited_sequence: str,
+                             editing_tech: str | None = None) -> str:
+    print(f"[PD] editing_tech={editing_tech!r}")
+    """
+    PrimeDesign shorthand generator with robust handling of already-gapped inputs.
+
+    Fast-path for the common PE cases:
+      - If ref/alt are equal-length and differ in EXACTLY ONE contiguous block:
+          ref == '---...' and alt == 'ACGT...'  -> (+ACGT)
+          ref == 'ACGT...' and alt == '---...'  -> (-ACGT)
+          else                                   -> (REF/ALT) for that block
+      - Else, fall back to gapped emit (and difflib only when no gaps exist).
+
+    Also mirrors your Bxb1/twin-prime (+attB) input when editing_tech indicates it.
+    """
+    ref = ''.join(str(ref_sequence).upper().split())
+    alt = ''.join(str(edited_sequence).upper().split())
+
+
+    # --- Helper: emit from gapped strings (already equal length)
+    def emit_from_gapped(gref: str, galt: str) -> str:
+        out = []
+        i, n = 0, len(gref)
+        while i < n:
+            r, e = gref[i], galt[i]
+            if r == e:
+                out.append(r); i += 1; continue
+            j = i
+            while j < n and gref[j] != galt[j]:
+                j += 1
+            rseg = gref[i:j]; eseg = galt[i:j]
+
+            is_leading = (i == 0)
+            is_trailing = (j == n)
+            if set(eseg) == {'-'} and set(rseg) != {'-'}:  # deletion block
+                out.append(
+                    rseg.replace('-', '') if (is_leading or is_trailing)
+                    else f"(-{rseg.replace('-', '')})"
+                )
+            elif set(rseg) == {'-'} and set(eseg) != {'-'}:  # insertion block
+                out.append(
+                    eseg.replace('-', '') if (is_leading or is_trailing)
+                    else f"(+{eseg.replace('-', '')})"
+                )
+
+            else:
+                out.append(f"({rseg.replace('-', '')}/{eseg.replace('-', '')})")  # substitution block
+            i = j
+        return ''.join(out)
+
+    # --- NEW: single-diff fast-path (avoids spurious (+...) at ends)
+    if len(ref) == len(alt):
+        diffs = [i for i, (r, e) in enumerate(zip(ref, alt)) if r != e]
+        if diffs:
+            # one contiguous block?
+            if max(diffs) - min(diffs) + 1 == len(diffs):
+                i, j = min(diffs), max(diffs) + 1
+                rseg, eseg = ref[i:j], alt[i:j]
+                # exact single-block classification
+                if set(rseg) == {'-'} and set(eseg) != {'-'}:
+                    return f"{ref[:i]}(+{eseg.replace('-', '')}){ref[j:]}"       # single insertion
+                if set(eseg) == {'-'} and set(rseg) != {'-'}:
+                    return f"{ref[:i]}(-{rseg.replace('-', '')}){ref[j:]}"       # single deletion
+                # substitution block (possibly multi-base)
+                return f"{ref[:i]}({rseg.replace('-', '')}/{eseg.replace('-', '')}){ref[j:]}"
+
+        # if there are gaps but multiple diff blocks, honor them precisely
+        if '-' in ref or '-' in alt:
+            return emit_from_gapped(ref, alt)
+
+    # --- Otherwise, align (only when needed) then emit
+    def gapped_align(a: str, b: str) -> tuple[str, str]:
+        sm = difflib.SequenceMatcher(a=a, b=b, autojunk=False)
+        ga, gb = [], []
+        for tag, i1, i2, j1, j2 in sm.get_opcodes():
+            if tag == 'equal':
+                ga.append(a[i1:i2]); gb.append(b[j1:j2])
+            elif tag == 'delete':     # deletion in alt
+                seg = a[i1:i2]; ga.append(seg); gb.append('-' * (i2 - i1))
+            elif tag == 'insert':     # insertion in alt
+                seg = b[j1:j2]; ga.append('-' * (j2 - j1)); gb.append(seg)
+            elif tag == 'replace':
+                seg_a, seg_b = a[i1:i2], b[j1:j2]
+                L = max(len(seg_a), len(seg_b))
+                ga.append(seg_a.ljust(L, '-')); gb.append(seg_b.ljust(L, '-'))
+        return ''.join(ga), ''.join(gb)
+
+    if '-' in ref or '-' in alt:
+        # lengths unequal but gaps present → strip and re-align
+        gref, galt = gapped_align(ref.replace('-', ''), alt.replace('-', ''))
+        return emit_from_gapped(gref, galt)
+
+    if len(ref) == len(alt):
+        return emit_from_gapped(ref, alt)
+
+    gref, galt = gapped_align(ref, alt)
+    return emit_from_gapped(gref, galt)
+
+
 
 
 def calc_rs3_scores(context_30mers, tracr="Hsu2013"):
@@ -186,11 +288,9 @@ def calc_rs3_scores(context_30mers, tracr="Hsu2013"):
     # 3) Cache fallback (precomputed values for static builds)
     if _RS3_CACHE:
         out = [_RS3_CACHE.get(s) if s is not None else None for s in seqs]
-        print("[RS3] returning cache values; first 5:", out[:5])
         return out
 
     # 4) Nothing available
-    print("[RS3] no native/API/cache available; returning blanks")
     return [None] * len(seqs)
 
 
@@ -562,7 +662,6 @@ def get_editor_info(ref_seq, edited_seq, pams):
         return editor_data['PrimeEditor']['default'], "PrimeEditor"
     for ref_base, edit_base in zip(ref_seq, edited_seq):
         if ref_base != edit_base:
-            print("ref_base != edit_base")
             # Create a mutation identifier from reference and edited bases
             edit_type = f"{ref_base}>{edit_base}"
 
@@ -570,7 +669,6 @@ def get_editor_info(ref_seq, edited_seq, pams):
             if edit_type in ["A>G", "T>C"]:
                 mutation_type = "ABE"
             elif edit_type in ["G>A", "C>T"]:
-                print("edit_type in g > a, c>t")
                 mutation_type = "CBE"
             elif edit_type in ["C>G", "G>C"]:
                 mutation_type = "CGB"
@@ -705,8 +803,6 @@ def handle_deletions(ref_sequence, edited_sequence, df_dict, ref_sequence_origin
     deletion_start = str(edited_sequence).find('-')
     deletion_end = str(edited_sequence).rfind('-')
     if deletion_end - deletion_start + 1 <= 80:
-        print("seq in <80")
-        print("seq in <80bp")
         primedesign_input = str(
             ref_sequence[:deletion_start] + f"(-{ref_sequence[deletion_start: deletion_end + 1]})" + ref_sequence[
                                                                                                      deletion_end + 1:])
@@ -715,7 +811,6 @@ def handle_deletions(ref_sequence, edited_sequence, df_dict, ref_sequence_origin
             update_df_dict_with_primedesign_output(df_dict, ref_sequence_original, edited_sequence_original,
                                                    primedesign_output, "Prime Editing")
         else:
-            print("seq >80")
             add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original,
                                            "Use Twin Prime Editing/Integrase/HDR")
             pass
@@ -773,7 +868,6 @@ def handle_deletions(ref_sequence, edited_sequence, df_dict, ref_sequence_origin
 
 # helper function to handle insertions: process cases where there are insertions.
 def handle_insertions(ref_sequence, edited_sequence, df_dict, ref_sequence_original, edited_sequence_original):
-    print("running insertions")
     insertion_start = str(ref_sequence).find('-')
     insertion_end = str(ref_sequence).rfind('-')
     # 38 bp minimal Bxb1 attB site from https://pmc.ncbi.nlm.nih.gov/articles/PMC5464966/
@@ -818,7 +912,6 @@ def handle_insertions(ref_sequence, edited_sequence, df_dict, ref_sequence_origi
                                                        primedesign_output, "Prime Editing (Creating a Bxb1 Site)")
             # This is the case that the seq is <44 and has no Recommended Guides
             else:
-                print("seq is <44 and has no Recommended Guides")
                 print(modified_edited_sequence)
             add_insertion_deletion_entries(df_dict, ref_sequence_original, edited_sequence_original,"No Guides, Other Method Required")
 
@@ -1145,14 +1238,10 @@ def get_guides(ref_sequence_original, edited_sequence_original, PAM, edit_start=
 
     def handle_insertion_or_deletion(ref_sequence, edited_sequence, df_dict, ref_sequence_original,
                                      edited_sequence_original):
-        print("Insertion Or Deletion")
-        print("Reference Sequence:", ref_sequence)
         if '-' not in ref_sequence:
-            print("deletion")
             return handle_deletions(ref_sequence, edited_sequence, df_dict, ref_sequence_original,
                                     edited_sequence_original)
         if '-' in ref_sequence:
-            print("insertion")
             return handle_insertions(ref_sequence, edited_sequence, df_dict, ref_sequence_original,
                                      edited_sequence_original)
 
