@@ -983,7 +983,7 @@ def generate_experimental_validation_section(guides_df, pam_type):
 def generate_prime_del_visualization(guides_df, ref_sequence_input, substitution_position, PAM):
     prime_del_visualization_elements = []
     # Add the introductory text with colored formatting
-    '''
+
     intro_text = ui.help_text(
         "This section visualizes PRIME-Del (paired prime editing). ",
         "The ", ui.tags.b("red", style="color: red;"), " and ",
@@ -992,7 +992,7 @@ def generate_prime_del_visualization(guides_df, ref_sequence_input, substitution
         "The dotted region marks the DNA segment programmed for deletion. ",
         "Steps shown: nick by PE2 (Cas9 H840A), reverse transcription to form 3′ flaps, and DNA repair to create a precise deletion (optionally with a short, encoded insert)."
     )
-    '''
+
     # Center the image
 
     # Center the image
@@ -1568,7 +1568,16 @@ def server(input, output, session):
                     "(Hsu et al. 2021 Nat Commun)",
                     {"href": "https://pubmed.ncbi.nlm.nih.gov/33589617/", "target": "_blank"}
                 ),
-                "."
+                ".",
+                ui.br(),
+                " Note that if copying and pasting this text does not give PrimeDesign guide RNAs, this means "
+                             "that your edits are not compatible with the standard PrimeDesign parameters. Consider using "
+                             "homology-directed repair (HDR) to induce this edit instead and more information on HDR can be "
+                             "found",
+                ui.tags.a(
+                    " here",
+                    {"href": "https://www.nature.com/articles/s41592-023-01949-1", "target": "_blank"}
+                ),
             ),
             ui.br(),
             ui.br(),
@@ -1900,24 +1909,32 @@ def server(input, output, session):
                 )
             )
 
+
         else:
+
             tech_hint = None
-            try:
+
+            # Only mark Bxb1 when the data says so (preferred),
+
+            # or when a very long contiguous gap indicates the twin-prime prep step (heuristic).
+
+
+            if not twin_prime_editing_guides_df.empty:
+
                 tech_hint = "Prime Editing (Creating a Bxb1 Site)"
-            except Exception:
-                pass
 
-            # Fallback: classify by a long gap (>44) in either input (twin-prime step)
-            import re
-            if tech_hint is None:
-                if re.search(r"-{45,}", str(ref_sequence_input)) or re.search(r"-{45,}", str(edited_sequence_input)):
-                    tech_hint = "Prime Editing (Creating a Bxb1 Site)"
+            elif re.search(r"-{45,}", str(ref_sequence_input)) or re.search(r"-{45,}", str(edited_sequence_input)):
 
+                tech_hint = "Prime Editing (Creating a Bxb1 Site)"
 
             pd_notation = to_prime_design_notation(
+
                 str(ref_sequence_input),
+
                 str(edited_sequence_input),
+
                 tech_hint
+
             )
 
             prime_copy_card = ui.div(
@@ -1991,9 +2008,13 @@ def server(input, output, session):
 
             ui_elements.append(help_text)
             ui_elements.append(ui.br())
-            ui_elements.append(explore_button)
-            ui_elements.append(prime_copy_card)
-            ui_elements.append(prime_iframe)
+            if tech_hint == "Prime Editing (Creating a Bxb1 Site)":
+                ui_elements.append(ui.br())
+                ui_elements.append(prime_copy_card)
+            else:
+                ui_elements.append(explore_button)
+                ui_elements.append(prime_copy_card)
+                ui_elements.append(prime_iframe)
 
             ui_elements.append(
                 ui.div(

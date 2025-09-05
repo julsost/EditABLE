@@ -167,7 +167,6 @@ def to_prime_design_notation(ref_sequence: str,
 
 
     if editing_tech == 'Prime Editing (Creating a Bxb1 Site)':
-
         return f"replace insertion with bxb1 site to explore on Prime Design: GGCTTGTCGACGACGGCGGTCTCCGTCGTCAGGATCAT"
 
     def emit_from_gapped(gref: str, galt: str) -> str:
