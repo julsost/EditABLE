@@ -151,6 +151,7 @@ def to_prime_design_notation(ref_sequence: str,
                              edited_sequence: str,
                              editing_tech: str | None = None) -> str:
     print(f"[PD] editing_tech={editing_tech!r}")
+    print(f"[PD] edited_sequence={edited_sequence!r}")
     """
     PrimeDesign shorthand generator with robust handling of already-gapped inputs.
 
@@ -160,14 +161,15 @@ def to_prime_design_notation(ref_sequence: str,
           ref == 'ACGT...' and alt == '---...'  -> (-ACGT)
           else                                   -> (REF/ALT) for that block
       - Else, fall back to gapped emit (and difflib only when no gaps exist).
-
-    Also mirrors your Bxb1/twin-prime (+attB) input when editing_tech indicates it.
     """
     ref = ''.join(str(ref_sequence).upper().split())
     alt = ''.join(str(edited_sequence).upper().split())
 
 
-    # --- Helper: emit from gapped strings (already equal length)
+    if editing_tech == 'Prime Editing (Creating a Bxb1 Site)':
+
+        return f"replace insertion with bxb1 site to explore on Prime Design: GGCTTGTCGACGACGGCGGTCTCCGTCGTCAGGATCAT"
+
     def emit_from_gapped(gref: str, galt: str) -> str:
         out = []
         i, n = 0, len(gref)
@@ -192,7 +194,6 @@ def to_prime_design_notation(ref_sequence: str,
                     eseg.replace('-', '') if (is_leading or is_trailing)
                     else f"(+{eseg.replace('-', '')})"
                 )
-
             else:
                 out.append(f"({rseg.replace('-', '')}/{eseg.replace('-', '')})")  # substitution block
             i = j
@@ -753,9 +754,14 @@ def set_pam_sequences(PAM):
 
 # helper function to create mutuable seq: Convert input sequences to mutable sequences
 def create_mutable_sequences(ref_sequence_original, edited_sequence_original):
+
     ref_sequence = MutableSeq(ref_sequence_original)
+
     edited_sequence = MutableSeq(edited_sequence_original)
     return ref_sequence, edited_sequence
+
+def my_original(ref_sequence_original):
+    return ref_sequence_original
 
 
 # helper function to identify substitution position: Find the position of the substitution in the sequences

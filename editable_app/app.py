@@ -18,15 +18,13 @@ accepted_bases = {"A", "C", "G", "T", "-"}
 # A card component wrapper.
 def ui_card(title, id, *args):
     return ui.div(
-        {"class": "card mb-3"},
+        {"class": "card mb-3", "id": id},  # ← id lives on the card container now
         ui.div(
-            {
-                "class": "card-header",
-                "style": "background-color:#dcf1fa; font-weight:600; font-size:1.1rem;"
-            },
+            {"class": "card-header",
+             "style": "background-color:#dcf1fa; font-weight:600; font-size:1.1rem;"},
             title,
         ),
-        ui.div({"class": "card-body", "id": id}, *args),
+        ui.div({"class": "card-body"}, *args),
     )
 
 
@@ -121,7 +119,7 @@ app_ui = ui.page_fluid(
             ui.help_text("There are two ways to use this app:"),
             ui.br(),
             ui.help_text(
-                '''1. To find guides for a single CRISPR edit please enter your original sequence and desired sequence in 
+                '''1. To find guides for a single CRISPR edit, please enter your original sequence and desired sequence in 
                 their respective input boxes.'''
             ),
             ui.br(),
@@ -152,8 +150,8 @@ app_ui = ui.page_fluid(
             ui.br(),
             ui.br(),
             ui.help_text(
-                '''For single nucleotide variant (SNV) edits, the input sequences are the most straightforward. You can 
-                input the original and desired sequences without modification. For example, this would be a valid set of inputs:'''
+                '''For single nucleotide variant (SNV) edits, please input your original and desired sequences without 
+                modification. For example, this would be a valid set of inputs:'''
             ),
             ui.br(),
             ui.br(),
@@ -177,7 +175,7 @@ app_ui = ui.page_fluid(
             ui.br(),
             ui.help_text(
                 '''For changes that result in deletions, use a string of "-" characters in the desired sequence to denote the 
-           GATAGCTCAGCTAGCCTAGTCAAACCTATCGACGTCGATCGATCGATCACACCGCCTAATC     area of the deletion. For example, this would be a valid set of inputs for a deletion:'''
+           area of the deletion. For example, this would be a valid set of inputs for a deletion:'''
             ),
             ui.br(),
             ui.br(),
@@ -201,7 +199,7 @@ app_ui = ui.page_fluid(
             ui.br(),
             ui.help_text(
                 '''For changes that result in insertions/duplications, use a string of "-" characters in the original sequence 
-                to denote the area of the insertion/duplication. For example, this would be a valid set of inputs for a insertions/duplications:'''
+                to denote the area of the insertion/duplication. For example, this would be a valid set of inputs for an insertion/duplication:'''
             ),
             ui.br(),
             ui.br(),
@@ -242,7 +240,7 @@ app_ui = ui.page_fluid(
                 "Single Sequence",
                 'single_sequence_input',
                 ui.help_text(
-                    "If you want to find guides for a single CRISPR edit enter in your original sequence and desired sequence in their respective input boxes."
+                    "If you want to find guides for a single CRISPR edit, enter in your original sequence and desired sequence in their respective input boxes."
                 ),
                 ui.br(),
                 ui.br(),
@@ -254,6 +252,8 @@ app_ui = ui.page_fluid(
                                    width="100%"),
                 ui.input_action_button("find_guides_text", "Find Single Guides", class_="btn-primary"),
             ),
+ui.div(
+        {"style": "max-width:1300px; margin:0 auto; padding:0 10px;"},
             ui_card(
                 "Batch Sequence",
                 'batch_sequence_input',
@@ -283,7 +283,7 @@ app_ui = ui.page_fluid(
     ui.br(),
 
 )
-
+)
 
 # checks if no guides found
 def check_for_BE_or_PE_guides(guides_df):
@@ -330,6 +330,7 @@ def check_ref_edited_pair(ref_sequence, edited_sequence, edit_start=4, edit_end=
             edited_base = edited_sequence[i]
             if ref_base != edited_base:
                 if substitution_position is not None:
+                    #return True, "Inputs verified. Proceed to get guides."
                     return False, "The original sequence and the edited sequence contain more than one SNV. EditABLE currently only supports single SNVs, insertions, or deletions."
                 else:
                     substitution_position = i
@@ -351,6 +352,7 @@ def check_ref_edited_pair(ref_sequence, edited_sequence, edit_start=4, edit_end=
                         start_dash_position = i
                     if current_dash_position is not None and i - current_dash_position != 1:
                         return False, 'The "-" characters are not contiguous, indicating that there are multiple insertions. EditABLE currently only supports single SNVs, insertions, or deletions.'
+                        #return True, "Inputs verified. Proceed to get guides."
                     else:
                         current_dash_position = i
             if start_dash_position < 25:
@@ -366,6 +368,7 @@ def check_ref_edited_pair(ref_sequence, edited_sequence, edit_start=4, edit_end=
                         start_dash_position = i
                     if current_dash_position is not None and i - current_dash_position != 1:
                         return False, 'The "-" characters are not contiguous, indicating that there are multiple deletions. EditABLE currently only supports single SNVs, insertions, or deletions.'
+                        #return True, "Inputs verified. Proceed to get guides."
                     else:
                         current_dash_position = i
             if start_dash_position < 25:
@@ -380,9 +383,7 @@ def create_prime_del_plasmid_card(guides_df, editor_info, editor_url):
     return ui_card(
         "Suggested Addgene Plasmids",
         "prime_del_plasmids",
-        ui.help_text("Recommended pegRNA Plasmid A: Prime-Del Backbone (Addgene: 172657)"),
-        ui.br(),
-        ui.help_text("Recommended pegRNA Plasmid B: Prime-Del Backbone (Addgene: 172658)"),
+        ui.help_text("Recommended pegRNA Prime-Del Backbone (Addgene: 132777)"),
         ui.br(),
         ui.help_text("Recommended Prime Editor Plasmid: PE2 (Addgene: 199267)"),
         ui.br(),
@@ -390,14 +391,8 @@ def create_prime_del_plasmid_card(guides_df, editor_info, editor_url):
         ui.div(
             {"class": "d-flex"},
             ui.tags.a(
-                "View Backbone A",
-                href="http://n2t.net/addgene:172657",
-                target="_blank",
-                class_="btn btn-primary me-2"
-            ),
-            ui.tags.a(
-                "View Backbone B",
-                href="http://n2t.net/addgene:172658",
+                "View pegRNA Backbone",
+                href="https://www.addgene.org/132777/",
                 target="_blank",
                 class_="btn btn-primary me-2"
             ),
@@ -512,9 +507,7 @@ def create_integrase_plasmid_card(guides_df, editor_info, editor_url):
     return ui_card(
         "Suggested Addgene Plasmids for Bxb1 Integration",
         "integrase_only_card",
-        ui.help_text("You’ll need both of these plasmids to perform Bxb1-mediated site-specific integration."),
-        ui.br(),
-        ui.br(),
+
         ui.div(
             {"class": "d-flex gap-2"},
             ui.tags.a(
@@ -525,7 +518,7 @@ def create_integrase_plasmid_card(guides_df, editor_info, editor_url):
             ),
             ui.tags.a(
                 "View attP Donor Vector (Clone Your Insert)",
-                href="https://www.addgene.org/60561/",
+                href="https://www.addgene.org/182139/",
                 target="_blank",
                 class_="btn btn-primary"
             ),
@@ -647,7 +640,6 @@ def generate_twin_prime_protocols_section(guides_df):
     # Process and add pegRNA oligos if they are present and valid
     if pegRNA_oligo_top and any(pegRNA_oligo_top):
         processed_pegRNA_oligos = process_peg_rnas(pegRNA_oligo_top, pegRNA_oligo_extension_bottom)
-        print("processed_pegRNA_oligos")
         if processed_pegRNA_oligos:
             for guide_rna in processed_pegRNA_oligos:
                 guide_rna_parts = guide_rna.split('\n')
@@ -711,7 +703,7 @@ def generate_twin_prime_protocols_section(guides_df):
     prime_section.append(ui.br())
     prime_section.append(ui.br())
 
-    return ui_card("Experimental Validation of Prime Editing-Bxb1 integration step", 'prime_section', *prime_section)
+    return ui_card("Experimental Validation of Prime Editing: Bxb1 Integration Step", 'prime_section', *prime_section)
 
 
 def generate_integrase_protocols_section(guides_df):
@@ -991,6 +983,7 @@ def generate_experimental_validation_section(guides_df, pam_type):
 def generate_prime_del_visualization(guides_df, ref_sequence_input, substitution_position, PAM):
     prime_del_visualization_elements = []
     # Add the introductory text with colored formatting
+    '''
     intro_text = ui.help_text(
         "This section visualizes PRIME-Del (paired prime editing). ",
         "The ", ui.tags.b("red", style="color: red;"), " and ",
@@ -999,7 +992,7 @@ def generate_prime_del_visualization(guides_df, ref_sequence_input, substitution
         "The dotted region marks the DNA segment programmed for deletion. ",
         "Steps shown: nick by PE2 (Cas9 H840A), reverse transcription to form 3′ flaps, and DNA repair to create a precise deletion (optionally with a short, encoded insert)."
     )
-
+    '''
     # Center the image
 
     # Center the image
@@ -1032,12 +1025,12 @@ def generate_prime_editing_visualization(guides_df, ref_sequence_input, substitu
 
     # Add the introductory text with colored formatting
     intro_text = ui.help_text(
-        "This section provides a visualization of the recommended prime editing guide RNA design for installing a Bxb1 integration site. ",
-        "The ", ui.tags.b("red", style="color: red;"), " characters represent the pegRNA spacer, ",
-        "the ", ui.tags.b("blue", style="color: blue;"), " characters represent the SpCas9 scaffold, ",
-        "the ", ui.tags.b("orange", style="color: orange;"), " characters represent the pegRNA extension sequence, ",
-        "and the ", ui.tags.b("violet", style="color: violet;"),
-        " characters represent the nicking guide RNA (ngRNA, if applicable). Note that the ngRNA is only applicable to certain edits. ",
+        "This section provides a visualization of the Bxb1 integrase–mediated DNA integration process. ",
+        "The ", ui.tags.b("orange", style="color: orange;"), " sequence represents the genomic attB site, ",
+        "the ", ui.tags.b("blue", style="color: blue;"), " sequence represents the attP site on the donor plasmid, ",
+        "and the ", ui.tags.b("red", style="color: red;"), " sequence represents the inserted DNA payload. ",
+        "After integration, the inserted sequence is flanked by hybrid attL and attR sites, ",
+        "enabling precise, site-specific insertion of large DNA fragments into the genome. ",
     )
 
     prime_visualization_elements.append(intro_text)
@@ -1116,15 +1109,14 @@ def generate_twin_prime_editing_visualization(guides_df, ref_sequence_input, sub
     pegRNA_oligo_top = guides_df["pegRNA Spacer Oligo Top"].tolist()
     pegRNA_oligo_extension_bottom = guides_df['pegRNA Extension Oligo Bottom'].tolist()
     ngRNA_oligos = guides_df["ngRNA Oligo Top"].tolist()
-    print("pegRNA_oligo_top", pegRNA_oligo_top)
-    print("pegRNA_oligo_extension_bottom", pegRNA_oligo_extension_bottom)
+
 
     processed_pegRNA_oligos = visualization_peg_rnas(pegRNA_oligo_top,
                                                      pegRNA_oligo_extension_bottom) if pegRNA_oligo_top and any(
         pegRNA_oligo_top) else None
     processed_ngRNA_oligos = visualization_ng_rnas(ngRNA_oligos) if ngRNA_oligos and any(ngRNA_oligos) and ngRNA_oligos[
         0] != 'n/a' else None
-    print("processed_pegRNA_oligos", processed_pegRNA_oligos)
+
     prime_visualization_elements = []
     # Add the introductory text with colored formatting
     intro_text = ui.help_text(
@@ -1177,7 +1169,6 @@ def generate_twin_prime_editing_visualization(guides_df, ref_sequence_input, sub
             prime_visualization_elements.append(ui.help_text(f"pegRNA:"))
             prime_visualization_elements.append(ui.br())
             prime_visualization_elements.append(complete_guide_text)
-            print("complete_guide_text", complete_guide_text)
             prime_visualization_elements.append(ui.br())
             prime_visualization_elements.append(ui.br())
 
@@ -1475,13 +1466,13 @@ def server(input, output, session):
             ui.update_text_area("ref_sequence_input", value="")
             ui.update_text_area("edited_sequence_input", value="")
             ui.update_select("pam_type", selected='NGN')
-            ui.remove_ui(selector="div:has(> #results)")
+            ui.remove_ui(selector="div.card:has(#results)")
             ui.remove_ui(selector="div:has(> #upload_status_message)")
             ui.remove_ui(selector="#error_message")
 
             # Clear the file input UI
             ui.remove_ui(selector="div:has(> #file1)")
-
+            ui.remove_ui(selector="div.card:has(#results)")
             # Re-render the file input UI
             @output
             @render.ui
@@ -1542,12 +1533,15 @@ def server(input, output, session):
 
     def display_error_message(message, ref_seq: str | None = None, edited_seq: str | None = None):
         # default: plain red message (preserves current UX for most validation errors)
-        base = ui.div(ui.tags.b(message, style="color: red;", id='error_message'))
+        multi_snv_trigger = "SNV" in message
+        if not multi_snv_trigger:
+            ui.notification_show(message, type="error", duration=4)
+        #base = ui.div(ui.tags.b(message, style="color: red;", id='error_message'))
 
         # Show friendly PrimeDesign card ONLY for the multiple-SNV case
-        multi_snv_trigger = "SNV" in message
+
         if not (multi_snv_trigger and ref_seq and edited_seq):
-            return base
+            return ui.TagList()
 
         # Build PrimeDesign notation for copy/paste
         pd_string = to_prime_design_notation(ref_seq, edited_seq)
@@ -1562,7 +1556,19 @@ def server(input, output, session):
             ui.help_text(
                 "The inputs you provided contain more than one SNV, insertion or deletion. The EditABLE algorithm "
                 "recommends prime editing for these types of genomic edits and you can copy and paste directly into the "
-                "embedded PrimeDesign tool below to design your guide RNAs."
+                "embedded PrimeDesign tool below to design your guide RNAs." 
+                " For more advanced usage "
+                "please visit the ",
+                ui.tags.a(
+                    "PrimeDesign portal",
+                    {"href": "https://prime-design-222753790581.us-east4.run.app", "target": "_blank"}
+                ),
+                " or see the original publication ",
+                ui.tags.a(
+                    "(Hsu et al. 2021 Nat Commun)",
+                    {"href": "https://pubmed.ncbi.nlm.nih.gov/33589617/", "target": "_blank"}
+                ),
+                "."
             ),
             ui.br(),
             ui.br(),
@@ -1654,7 +1660,7 @@ def server(input, output, session):
             to_display_guides_df = to_display_guides_df.drop(columns=cols_to_drop)
 
         guides_df = pd.concat(dfs_to_merge_download)
-
+        ui_elements = []
         ui.help_text(
             ui.tags.div(
                 [
@@ -1882,6 +1888,8 @@ def server(input, output, session):
                                          {"href": "https://www.nature.com/articles/s41587-021-01025-z",
                                           "target": "_blank"}
                                      ),
+                                     ui.br(),
+                                     ui.br(),
                                      )
             ui_elements.append(
                 ui_card(
@@ -1923,7 +1931,7 @@ def server(input, output, session):
                 {"id": "prime_copy_card", "style": "display:none; margin-bottom:10px;"}
             )
 
-            guide_title = "Recommended Prime Editing Guide RNAs"
+            guide_title = ("Recommended Prime Editing Guides: Installing BxbI Integration Site" if tech_hint == "Prime Editing (Creating a Bxb1 Site)" else "Recommended Prime Editing Guide RNAs")
             help_text = ui.help_text(
                 "Note: We use the PrimeDesign algorithm with default parameters (including NGG PAM), "
                 "to identify the single most optimal prime editing guide RNA. For more advanced usage "
@@ -2058,7 +2066,7 @@ def server(input, output, session):
             twin_prime_editing_plasmid_card = create_twin_prime_editing_plasmid_card(twin_prime_editing_guides_df,
                                                                                      editor_info, editor_url)
             ui_elements.append(ui_card(
-                "Visualization of Prime Editing Guides - Creating Bxb1 Integration site",
+                "Visualization of Prime Editing Guides: Installing BxbI Integration Site",
                 "prime_editing_visualization",
                 *generate_twin_prime_editing_visualization(twin_prime_editing_guides_df, ref_sequence_input,
                                                            substitution_position, PAM)
@@ -2104,7 +2112,7 @@ def server(input, output, session):
             # 3) tell the browser to hide iframes and restore button labels
             session.send_custom_message("resetPrimeToggle", None)
 
-        # _________________________________
+
         ui_elements.append(ui.download_button("download_results", "Download Results as CSV File"))
         return ui.TagList(
             ui.div(
