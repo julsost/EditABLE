@@ -1565,11 +1565,11 @@ def server(input, output, session):
                 "embedded PrimeDesign tool below to design your guide RNAs."
             ),
             ui.br(),
+            ui.br(),
             ui.help_text("Copy & paste this into PrimeDesign:"),
             ui.tags.pre(pd_string, style="font-family: Courier, monospace; white-space: pre-wrap;"),
             ui.br(),
             ui.input_action_button("toggle_prime", "Explore on PrimeDesign", class_="btn-primary"),
-            ui.br(),
             ui.br(),
             ui.div(
                 {"id": "prime_iframe", "style": "display:none;"},
@@ -1949,6 +1949,21 @@ def server(input, output, session):
               if (card) card.style.display = ""; // make sure table is visible again
             })();
             """))
+            # right after your existing ui.tags.script(...), add:
+            ui.tags.head(
+                ui.tags.style("""
+                  .lds-dual-ring{display:inline-block;width:64px;height:64px}
+                  .lds-dual-ring:after{
+                    content:" ";display:block;width:48px;height:48px;margin:8px;border-radius:50%;
+                    border:6px solid #cbd5e1;border-color:#cbd5e1 transparent #cbd5e1 transparent;
+                    animation:lds-dual-ring 1.2s linear infinite
+                  }
+                  @keyframes lds-dual-ring{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+                """),
+                # warm up the PrimeDesign hosts
+                ui.tags.link(rel="preconnect", href="https://prime-design-222753790581.us-east4.run.app"),
+                ui.tags.link(rel="dns-prefetch", href="https://prime-design-222753790581.us-east4.run.app"),
+            )
 
             explore_button = ui.tags.button(
                 "Explore on PrimeDesign",
@@ -1958,7 +1973,7 @@ def server(input, output, session):
 
             prime_iframe = ui.div(
                 ui.tags.iframe(
-                    src="https://prime-design-766275861038.us-east1.run.app/",
+                    src="https://prime-design-222753790581.us-east4.run.app",
                     style="width:100%; height:80vh; border:1px solid #ccc; border-radius:8px; display:none;",
                     id="prime_iframe",
                     title="PrimeDesign Portal",
