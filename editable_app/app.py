@@ -1011,6 +1011,7 @@ def generate_prime_del_visualization(guides_df, ref_sequence_input, substitution
 
 
 def generate_prime_editing_visualization(guides_df, ref_sequence_input, substitution_position, PAM):
+    print("here")
     pegRNA_oligo_top = guides_df["pegRNA Spacer Oligo Top"].tolist()
     pegRNA_oligo_extension_bottom = guides_df['pegRNA Extension Oligo Bottom'].tolist()
     ngRNA_oligos = guides_df["ngRNA Oligo Top"].tolist()
@@ -1024,7 +1025,7 @@ def generate_prime_editing_visualization(guides_df, ref_sequence_input, substitu
     prime_visualization_elements = []
 
     # Add the introductory text with colored formatting
-     intro_text_PE = ui.help_text(
+     intro_text = ui.help_text(
         "This section provides a visualization of the recommended prime editing guide RNA design. ",
         "The ", ui.tags.b("red", style="color: red;"), " characters represent the pegRNA spacer, ",
         "the ", ui.tags.b("blue", style="color: blue;"), " characters represent the SpCas9 scaffold, ",
@@ -1032,7 +1033,8 @@ def generate_prime_editing_visualization(guides_df, ref_sequence_input, substitu
         "and the ", ui.tags.b("violet", style="color: violet;"),
         " characters represent the nicking guide RNA (ngRNA, if applicable). Note that the ngRNA is only applicable to certain edits. ",
     
-    prime_visualization_elements.append(intro_text_PE)
+    prime_visualization_elements.append(intro_text)
+    print("here")
     prime_visualization_elements.append(ui.br())
     prime_visualization_elements.append(ui.br())
 
