@@ -1024,7 +1024,7 @@ def generate_prime_editing_visualization(guides_df, ref_sequence_input, substitu
     prime_visualization_elements = []
 
     # Add the introductory text with colored formatting
-    intro_text = ui.help_text(
+    intro_text_PE = ui.help_text(
         "This section provides a visualization of the Bxb1 integrase–mediated DNA integration process. ",
         "The ", ui.tags.b("orange", style="color: orange;"), " sequence represents the genomic attB site, ",
         "the ", ui.tags.b("blue", style="color: blue;"), " sequence represents the attP site on the donor plasmid, ",
@@ -1032,8 +1032,8 @@ def generate_prime_editing_visualization(guides_df, ref_sequence_input, substitu
         "After integration, the inserted sequence is flanked by hybrid attL and attR sites, ",
         "enabling precise, site-specific insertion of large DNA fragments into the genome. ",
     )
-
-    prime_visualization_elements.append(intro_text)
+    print("printing here debug)
+    prime_visualization_elements.append(intro_text_PE)
     prime_visualization_elements.append(ui.br())
     prime_visualization_elements.append(ui.br())
 
