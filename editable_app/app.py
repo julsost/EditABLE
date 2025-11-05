@@ -1024,15 +1024,14 @@ def generate_prime_editing_visualization(guides_df, ref_sequence_input, substitu
     prime_visualization_elements = []
 
     # Add the introductory text with colored formatting
-    intro_text_PE = ui.help_text(
-        "This section provides a visualization of the Bxb1 integrase–mediated DNA integration process. ",
-        "The ", ui.tags.b("orange", style="color: orange;"), " sequence represents the genomic attB site, ",
-        "the ", ui.tags.b("blue", style="color: blue;"), " sequence represents the attP site on the donor plasmid, ",
-        "and the ", ui.tags.b("red", style="color: red;"), " sequence represents the inserted DNA payload. ",
-        "After integration, the inserted sequence is flanked by hybrid attL and attR sites, ",
-        "enabling precise, site-specific insertion of large DNA fragments into the genome. ",
-    )
-    print("printing here debug)
+     intro_text_PE = ui.help_text(
+        "This section provides a visualization of the recommended prime editing guide RNA design. ",
+        "The ", ui.tags.b("red", style="color: red;"), " characters represent the pegRNA spacer, ",
+        "the ", ui.tags.b("blue", style="color: blue;"), " characters represent the SpCas9 scaffold, ",
+        "the ", ui.tags.b("orange", style="color: orange;"), " characters represent the pegRNA extension sequence, ",
+        "and the ", ui.tags.b("violet", style="color: violet;"),
+        " characters represent the nicking guide RNA (ngRNA, if applicable). Note that the ngRNA is only applicable to certain edits. ",
+    
     prime_visualization_elements.append(intro_text_PE)
     prime_visualization_elements.append(ui.br())
     prime_visualization_elements.append(ui.br())
