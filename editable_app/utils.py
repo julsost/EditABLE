@@ -640,13 +640,13 @@ editor_data = {
         'NYN': ('SpRY', '139999', 'https://www.addgene.org/139999/')
     },
     'CGB': {
-        'NGN': ('UdgX-HF-nCas9', '163559', 'https://www.addgene.org/163559/'),
-        'NGG': ('UdgX-HF-nCas9', '163559', 'https://www.addgene.org/163559/'),
+        'NGN': ('pCMV_UdgX-APOBEC1-UdgX-NG-nCas9', '163562', 'https://www.addgene.org/163562/'),
+        'NGG': ('pCMV_UdgX-APOBEC1-UdgX-nCas9', '163555', 'https://www.addgene.org/163555/'),
         'NGA': ('UdgX-HF-nCas9', '163559', 'https://www.addgene.org/163559/'),
         'NNGRRT': ('UdgX-HF-nCas9', '163559', 'https://www.addgene.org/163559/'),
         'NNNRRT': ('UdgX-HF-nCas9', '163559', 'https://www.addgene.org/163559/'),
-        'NRN': ('UdgX-HF-nCas9', '163559', 'https://www.addgene.org/163559/'),
-        'NYN': ('UdgX-HF-nCas9', '163559', 'https://www.addgene.org/163559/')
+        'NRN': ('pCMV_UdgX-APOBEC1-UdgX-NG-nCas9', '163562', 'https://www.addgene.org/163562/'),
+        'NYN': ('pCMV_UdgX-APOBEC1-UdgX-NG-nCas9', '163562', 'https://www.addgene.org/163562/')
     },
     'PrimeEditor': {
         'default': ('PE2', '132775', 'https://www.addgene.org/132775')
