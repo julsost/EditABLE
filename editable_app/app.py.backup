@@ -35,42 +35,28 @@ app_ui = ui.page_fluid(
   if (window.__primeToggleInit) return;   // avoid double-binding on hot reload
   window.__primeToggleInit = true;
 
-function $(id){ return document.getElementById(id); }
-  
+  function $(id){ return document.getElementById(id); }
 
-// One delegated listener that works for any future renders
-document.addEventListener("click", function(e) {
-  var t = e && e.target;
-  if (!t) return;
-  
-  // Add toggle_pridict to the condition
-  if (t.id !== "toggle_prime" && t.id !== "toggle_twin_prime" && t.id !== "toggle_pridict") return;
-  
-  var isPridict = (t.id === "toggle_pridict");
-  var isTwin    = (t.id === "toggle_twin_prime");
-  
-  // Determine which iframe to toggle
-  var iframe    = isPridict ? $("pridict_iframe") : (isTwin ? $("twin_prime_iframe") : $("prime_iframe"));
-  var tableCard = $("guides_table_card");
-  var copyCard  = isTwin ? $("twin_prime_copy_card") : $("prime_copy_card");
+   // One delegated listener that works for any future renders
+  document.addEventListener("click", function(e) {
+    var t = e && e.target;
+    if (!t) return;
+    if (t.id !== "toggle_prime" && t.id !== "toggle_twin_prime") return;
 
-  if (!iframe) return; // if UI hasn't rendered yet
+    var isTwin    = (t.id === "toggle_twin_prime");
+    var iframe    = $(isTwin ? "twin_prime_iframe" : "prime_iframe");
+    var tableCard = $("guides_table_card");
+    var copyCard  = $(isTwin ? "twin_prime_copy_card" : "prime_copy_card"); // NEW
 
-  var opening = (iframe.style.display === "" || iframe.style.display === "none");
-  iframe.style.display = opening ? "block" : "none";
-  
-  // Update button text based on which button was clicked
-  if (isPridict) {
-    t.innerText = opening ? "Close PRIDICT 2.0" : "Predict Efficiency with PRIDICT 2.0";
-  } else {
+    if (!iframe) return; // if UI hasn't rendered yet
+
+    var opening = (iframe.style.display === "" || iframe.style.display === "none");
+    iframe.style.display = opening ? "block" : "none";
     t.innerText = opening ? "Close PrimeDesign" : "Explore on PrimeDesign";
-  }
 
-  if (tableCard) tableCard.style.display = opening ? "none" : "";
-  if (copyCard)  copyCard.style.display  = opening ? "" : "none";
-}, true);
-
-
+    if (tableCard) tableCard.style.display = opening ? "none" : "";
+    if (copyCard)  copyCard.style.display  = opening ? "" : "none";         // NEW
+  }, true);
 
   // Allow the server to reset things between runs
   if (window.Shiny) {
@@ -111,7 +97,7 @@ document.addEventListener("click", function(e) {
 
     ui.div(
         {"style": "max-width:1300px; margin:0 auto; padding:0 10px;"},
-        ui.markdown("**Welcome to EditABLE!!**"),
+        ui.markdown("**Welcome to EditABLE!**"),
         ui.help_text(
             '''For troubleshooting and suggested revisions, please contact the ''',
             ui.tags.a("Bhalla Lab", {'href': 'https://med.stanford.edu/bhallalab.html', 'target': '_blank'}),
@@ -2019,21 +2005,7 @@ def server(input, output, session):
                     loading="eager"
                 )
             )
-            pridict_button = ui.tags.button(
-                "Predict Efficiency with PRIDICT 2.0",
-                id="toggle_pridict",
-                style="margin:10px; padding:6px 12px; border-radius:4px;"  # Removed background-color and color
-            )
 
-            pridict_iframe = ui.div(
-                ui.tags.iframe(
-                    src="https://pridict.it/",
-                    style="width:100%; height:80vh; border:1px solid #ccc; border-radius:8px; display:none;",
-                    id="pridict_iframe",
-                    title="PRIDICT 2.0 Portal",
-                    loading="eager"
-                )
-            )
             ui_elements.append(help_text)
             ui_elements.append(ui.br())
             if tech_hint == "Prime Editing (Creating a Bxb1 Site)":
@@ -2043,10 +2015,6 @@ def server(input, output, session):
                 ui_elements.append(explore_button)
                 ui_elements.append(prime_copy_card)
                 ui_elements.append(prime_iframe)
-
-                ui_elements.append(pridict_button)
-                ui_elements.append(pridict_iframe)
-
 
             ui_elements.append(
                 ui.div(
