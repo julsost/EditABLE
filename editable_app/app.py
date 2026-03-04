@@ -1955,7 +1955,7 @@ def server(input, output, session):
                 ui_card(
                     "Copy & Paste Sequence",
                     "prime_copy_card_body",
-                    ui.help_text("Paste the line below into the application's input box:"),
+                    ui.help_text("Paste the line below into the application input box:"),
                     ui.tags.pre(pd_notation,
                                 style="font-family: Courier, monospace; font-size: 14px; white-space: pre-wrap;")
                 ),
