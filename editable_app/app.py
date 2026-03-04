@@ -1,3 +1,4 @@
+
 import asyncio
 import os
 import pandas as pd
@@ -35,57 +36,56 @@ app_ui = ui.page_fluid(
   if (window.__primeToggleInit) return;   // avoid double-binding on hot reload
   window.__primeToggleInit = true;
 
-function $(id){ return document.getElementById(id); }
-  
+  function $(id){ return document.getElementById(id); }
 
-// One delegated listener that works for any future renders
-document.addEventListener("click", function(e) {
-  var t = e && e.target;
-  if (!t) return;
-  
-  // Add toggle_pridict to the condition
-  if (t.id !== "toggle_prime" && t.id !== "toggle_twin_prime" && t.id !== "toggle_pridict") return;
-  
-  var isPridict = (t.id === "toggle_pridict");
-  var isTwin    = (t.id === "toggle_twin_prime");
-  
-  // Determine which iframe to toggle
-  var iframe    = isPridict ? $("pridict_iframe") : (isTwin ? $("twin_prime_iframe") : $("prime_iframe"));
-  var tableCard = $("guides_table_card");
-  var copyCard  = isTwin ? $("twin_prime_copy_card") : $("prime_copy_card");
+   // One delegated listener that works for any future renders
+  document.addEventListener("click", function(e) {
+    var t = e && e.target;
+    if (!t) return;
+    if (t.id !== "toggle_prime" && t.id !== "toggle_twin_prime" && t.id !== "toggle_pridict" && t.id !== "toggle_test") return;
 
-  if (!iframe) return; // if UI hasn't rendered yet
+    var isTwin    = (t.id === "toggle_twin_prime");
+    var isPridict = (t.id === "toggle_pridict");
+    var isTest    = (t.id === "toggle_test");
 
-  var opening = (iframe.style.display === "" || iframe.style.display === "none");
-  iframe.style.display = opening ? "block" : "none";
-  
-  // Update button text based on which button was clicked
-  if (isPridict) {
-    t.innerText = opening ? "Close PRIDICT 2.0" : "Predict Efficiency with PRIDICT 2.0";
-  } else {
-    t.innerText = opening ? "Close PrimeDesign" : "Explore on PrimeDesign";
-  }
+    var iframe    = isTest ? $("test_iframe") : (isPridict ? $("pridict_iframe") : (isTwin ? $("twin_prime_iframe") : $("prime_iframe")));
+    var tableCard = $("guides_table_card");
+    var copyCard  = $(isTwin ? "twin_prime_copy_card" : "prime_copy_card");
 
-  if (tableCard) tableCard.style.display = opening ? "none" : "";
-  if (copyCard)  copyCard.style.display  = opening ? "" : "none";
-}, true);
+    if (!iframe) return; // if UI hasn't rendered yet
 
+    var opening = (iframe.style.display === "" || iframe.style.display === "none");
+    iframe.style.display = opening ? "block" : "none";
 
+    // Update button text based on which button was clicked
+    if (isTest) {
+      t.innerText = opening ? "Close Test" : "Test Toggle (Google)";
+    } else if (isPridict) {
+      t.innerText = opening ? "Close PRIDICT 2.0" : "Predict Efficiency with PRIDICT 2.0";
+    } else {
+      t.innerText = opening ? "Close PrimeDesign" : "Explore on PrimeDesign";
+    }
+
+    if (tableCard) tableCard.style.display = opening ? "none" : "";
+    if (copyCard)  copyCard.style.display  = opening ? "" : "none";
+  }, true);
 
   // Allow the server to reset things between runs
   if (window.Shiny) {
     Shiny.addCustomMessageHandler("primeToggleReset", function () {
-      [["toggle_prime","prime_iframe"],["toggle_twin_prime","twin_prime_iframe"]].forEach(function(pair){
+      [["toggle_prime","prime_iframe"],["toggle_twin_prime","twin_prime_iframe"],["toggle_pridict","pridict_iframe"],["toggle_test","test_iframe"]].forEach(function(pair){
         var b = pair[0], i = pair[1];
         var btn = $(b), ifr = $(i);
-        if (btn) btn.innerText = "Explore on PrimeDesign";
+        if (btn && b === "toggle_pridict") btn.innerText = "Predict Efficiency with PRIDICT 2.0";
+        else if (btn && b === "toggle_test") btn.innerText = "Test Toggle (Google)";
+        else if (btn) btn.innerText = "Explore on PrimeDesign";
         if (ifr) ifr.style.display = "none";
       });
 
       var tableCard = $("guides_table_card");
       if (tableCard) tableCard.style.display = "";
 
-      // Hide copy cards on reset (NEW)
+      // Hide copy cards on reset
       ["prime_copy_card","twin_prime_copy_card"].forEach(function(id){
         var c = $(id);
         if (c) c.style.display = "none";
@@ -111,7 +111,7 @@ document.addEventListener("click", function(e) {
 
     ui.div(
         {"style": "max-width:1300px; margin:0 auto; padding:0 10px;"},
-        ui.markdown("**Welcome to EditABLE!!**"),
+        ui.markdown("**Welcome to EditABLE!**"),
         ui.help_text(
             '''For troubleshooting and suggested revisions, please contact the ''',
             ui.tags.a("Bhalla Lab", {'href': 'https://med.stanford.edu/bhallalab.html', 'target': '_blank'}),
@@ -1615,8 +1615,8 @@ def server(input, output, session):
     @output
     @render.ui
     @reactive.event(input.find_guides_csv)
-    def run_with_csv_input():
-        session.send_custom_message("primeToggleReset", None)
+    async def run_with_csv_input():
+        await session.send_custom_message("primeToggleReset", None)
 
         nonlocal input_file
 
@@ -1735,8 +1735,8 @@ def server(input, output, session):
     @output
     @render.ui
     @reactive.event(input.find_guides_text)
-    def run_with_text_input():
-        session.send_custom_message("primeToggleReset", None)
+    async def run_with_text_input():
+        await session.send_custom_message("primeToggleReset", None)
 
         ref_sequence_input = "".join(input.ref_sequence_input().split()).upper()
         # print(ref_sequence_input)
@@ -1953,9 +1953,9 @@ def server(input, output, session):
 
             prime_copy_card = ui.div(
                 ui_card(
-                    "Copy & Paste into PrimeDesign",
+                    "Copy & Paste Sequence",
                     "prime_copy_card_body",
-                    ui.help_text("Paste the line below into the PrimeDesign input box:"),
+                    ui.help_text("Paste the line below into the application's input box:"),
                     ui.tags.pre(pd_notation,
                                 style="font-family: Courier, monospace; font-size: 14px; white-space: pre-wrap;")
                 ),
@@ -2019,21 +2019,27 @@ def server(input, output, session):
                     loading="eager"
                 )
             )
+
             pridict_button = ui.tags.button(
                 "Predict Efficiency with PRIDICT 2.0",
                 id="toggle_pridict",
-                style="margin:10px; padding:6px 12px; border-radius:4px;"  # Removed background-color and color
+                style="margin:10px; padding:6px 12px; border-radius:4px;"
             )
 
             pridict_iframe = ui.div(
                 ui.tags.iframe(
                     src="https://pridict.it/",
-                    style="width:100%; height:80vh; border:1px solid #ccc; border-radius:8px; display:none;",
+                    style="width:100%; height:80vh; border:1px solid #ccc; border-radius:8px; display:none; margin-bottom: 40px;",
                     id="pridict_iframe",
                     title="PRIDICT 2.0 Portal",
                     loading="eager"
                 )
+
             )
+
+
+
+
             ui_elements.append(help_text)
             ui_elements.append(ui.br())
             if tech_hint == "Prime Editing (Creating a Bxb1 Site)":
@@ -2046,6 +2052,7 @@ def server(input, output, session):
 
                 ui_elements.append(pridict_button)
                 ui_elements.append(pridict_iframe)
+
 
 
             ui_elements.append(
@@ -2194,3 +2201,7 @@ def server(input, output, session):
 
 
 app = App(app_ui, server)
+
+
+
+
