@@ -30,70 +30,146 @@ def ui_card(title, id, *args):
 
 app_ui = ui.page_fluid(
     {"id": "main-content"},
-
     ui.tags.script("""
-(function () {
-  if (window.__primeToggleInit) return;   // avoid double-binding on hot reload
-  window.__primeToggleInit = true;
+    (function () {
+      if (window.__primeToggleInit) return;
+      window.__primeToggleInit = true;
 
-  function $(id){ return document.getElementById(id); }
+      function $(id){ return document.getElementById(id); }
 
-   // One delegated listener that works for any future renders
-  document.addEventListener("click", function(e) {
-    var t = e && e.target;
-    if (!t) return;
-    if (t.id !== "toggle_prime" && t.id !== "toggle_twin_prime" && t.id !== "toggle_pridict" && t.id !== "toggle_test") return;
+      function isSafari() {
+        var ua = navigator.userAgent.toLowerCase();
+        var vendor = navigator.vendor.toLowerCase();
+        return ua.indexOf('safari') !== -1 && ua.indexOf('chrome') === -1 && vendor.indexOf('apple') !== -1;
+      }
 
-    var isTwin    = (t.id === "toggle_twin_prime");
-    var isPridict = (t.id === "toggle_pridict");
-    var isTest    = (t.id === "toggle_test");
+      var useSafariMode = isSafari();
+      console.log('Browser mode:', useSafariMode ? 'Safari (iframe)' : 'Chrome/Other (new tab)');
 
-    var iframe    = isTest ? $("test_iframe") : (isPridict ? $("pridict_iframe") : (isTwin ? $("twin_prime_iframe") : $("prime_iframe")));
-    var tableCard = $("guides_table_card");
-    var copyCard  = $(isTwin ? "twin_prime_copy_card" : "prime_copy_card");
+      // Store window references
+      var openWindows = {
+        prime: null,
+        twin_prime: null,
+        pridict: null
+      };
 
-    if (!iframe) return; // if UI hasn't rendered yet
+      document.addEventListener("click", function(e) {
+        var t = e && e.target;
+        if (!t) return;
+        if (t.id !== "toggle_prime" && t.id !== "toggle_twin_prime" && t.id !== "toggle_pridict") return;
 
-    var opening = (iframe.style.display === "" || iframe.style.display === "none");
-    iframe.style.display = opening ? "block" : "none";
+        var isTwin    = (t.id === "toggle_twin_prime");
+        var isPridict = (t.id === "toggle_pridict");
 
-    // Update button text based on which button was clicked
-    if (isTest) {
-      t.innerText = opening ? "Close Test" : "Test Toggle (Google)";
-    } else if (isPridict) {
-      t.innerText = opening ? "Close PRIDICT 2.0" : "Predict Efficiency with PRIDICT 2.0";
-    } else {
-      t.innerText = opening ? "Close PrimeDesign" : "Explore on PrimeDesign";
-    }
+        if (useSafariMode) {
+          // SAFARI: Use embedded iframe
+          var iframe    = isPridict ? $("pridict_iframe") : (isTwin ? $("twin_prime_iframe") : $("prime_iframe"));
+          var tableCard = $("guides_table_card");
+          var copyCard  = $(isTwin ? "twin_prime_copy_card" : "prime_copy_card");
 
-    if (tableCard) tableCard.style.display = opening ? "none" : "";
-    if (copyCard)  copyCard.style.display  = opening ? "" : "none";
-  }, true);
+          if (!iframe) return;
 
-  // Allow the server to reset things between runs
-  if (window.Shiny) {
-    Shiny.addCustomMessageHandler("primeToggleReset", function () {
-      [["toggle_prime","prime_iframe"],["toggle_twin_prime","twin_prime_iframe"],["toggle_pridict","pridict_iframe"],["toggle_test","test_iframe"]].forEach(function(pair){
-        var b = pair[0], i = pair[1];
-        var btn = $(b), ifr = $(i);
-        if (btn && b === "toggle_pridict") btn.innerText = "Predict Efficiency with PRIDICT 2.0";
-        else if (btn && b === "toggle_test") btn.innerText = "Test Toggle (Google)";
-        else if (btn) btn.innerText = "Explore on PrimeDesign";
-        if (ifr) ifr.style.display = "none";
-      });
+          var opening = (iframe.style.display === "" || iframe.style.display === "none");
+          iframe.style.display = opening ? "block" : "none";
 
-      var tableCard = $("guides_table_card");
-      if (tableCard) tableCard.style.display = "";
+          if (isPridict) {
+            t.innerText = opening ? "Close PRIDICT 2.0" : "Predict Efficiency with PRIDICT 2.0";
+          } else {
+            t.innerText = opening ? "Close PrimeDesign" : "Explore on PrimeDesign";
+          }
 
-      // Hide copy cards on reset
-      ["prime_copy_card","twin_prime_copy_card"].forEach(function(id){
-        var c = $(id);
-        if (c) c.style.display = "none";
-      });
-    });
-  }
-})();
-"""),
+          if (tableCard) tableCard.style.display = opening ? "none" : "";
+          if (copyCard)  copyCard.style.display  = opening ? "" : "none";
+
+        } else {
+          // CHROME/OTHERS: Show copy card and open tab
+          var tableCard = $("guides_table_card");
+          var copyCard  = $(isTwin ? "twin_prime_copy_card" : "prime_copy_card");
+
+          // Show the copy card first
+          if (tableCard) tableCard.style.display = "none";
+          if (copyCard) copyCard.style.display = "block";
+
+          var url;
+          var windowKey;
+          var toolName;
+
+          if (isPridict) {
+            url = "https://pridict.it/";
+            windowKey = 'pridict';
+            toolName = 'PRIDICT 2.0';
+          } else if (isTwin) {
+            url = "https://prime-design-222753790581.us-east4.run.app";
+            windowKey = 'twin_prime';
+            toolName = 'PrimeDesign';
+          } else {
+            url = "https://prime-design-222753790581.us-east4.run.app";
+            windowKey = 'prime';
+            toolName = 'PrimeDesign';
+          }
+
+          // Update button to show instructions
+          var originalText = t.innerText;
+          t.innerText = "✓ Copy sequence, then click here to open " + toolName;
+          t.style.background = "#4f8c5c";
+          t.style.color = "white";
+
+          // Make button open the tool when clicked again
+          var openTool = function(evt) {
+            if (evt.target.id === t.id) {
+              // Check if window already open
+              if (openWindows[windowKey] && !openWindows[windowKey].closed) {
+                openWindows[windowKey].focus();
+              } else {
+                openWindows[windowKey] = window.open(url, windowKey);
+              }
+
+              // Reset button
+              t.innerText = originalText;
+              t.style.background = "";
+              t.style.color = "";
+
+              // Remove this one-time listener
+              document.removeEventListener("click", openTool);
+            }
+          };
+
+          // Add one-time click listener for opening
+          setTimeout(function() {
+            document.addEventListener("click", openTool);
+          }, 100);
+        }
+      }, true);
+
+      if (window.Shiny) {
+        Shiny.addCustomMessageHandler("primeToggleReset", function () {
+          [["toggle_prime","prime_iframe"],["toggle_twin_prime","twin_prime_iframe"],["toggle_pridict","pridict_iframe"]].forEach(function(pair){
+            var b = pair[0], i = pair[1];
+            var btn = $(b), ifr = $(i);
+            if (btn && b === "toggle_pridict") {
+              btn.innerText = "Predict Efficiency with PRIDICT 2.0";
+              btn.style.background = "";
+              btn.style.color = "";
+            } else if (btn) {
+              btn.innerText = "Explore on PrimeDesign";
+              btn.style.background = "";
+              btn.style.color = "";
+            }
+            if (ifr) ifr.style.display = "none";
+          });
+
+          var tableCard = $("guides_table_card");
+          if (tableCard) tableCard.style.display = "";
+
+          ["prime_copy_card","twin_prime_copy_card"].forEach(function(id){
+            var c = $(id);
+            if (c) c.style.display = "none";
+          });
+        });
+      }
+    })();
+    """),
+
     ui.div(
         {
             "style": (
@@ -121,8 +197,10 @@ app_ui = ui.page_fluid(
         ui.help_text(
             '''EditABLE is currently pending publication, please see our manuscript pre-print ''',
             ui.tags.a("here", {'href': 'https://doi.org/10.21203/rs.3.rs-4775705/v1', 'target': '_blank'}),
-            ''' for more information on the algorithm. '''
-
+            ''' for more information on the algorithm. ''',
+            ui.br(),
+            ui.tags.strong("Note:"),
+            ''' For best results, use Safari for embedded tool integration.'''
         ),
         ui.br(),
         ui.br(),
@@ -1597,9 +1675,7 @@ def server(input, output, session):
             ui.br(),
             ui.help_text("Copy & paste this into PrimeDesign:"),
             ui.tags.pre(pd_string, style="font-family: Courier, monospace; white-space: pre-wrap;"),
-            ui.br(),
             ui.input_action_button("toggle_prime", "Explore on PrimeDesign", class_="btn-primary"),
-            ui.br(),
             ui.div(
                 {"id": "prime_iframe", "style": "display:none;"},
                 ui.tags.iframe(
@@ -2019,6 +2095,8 @@ def server(input, output, session):
                     loading="eager"
                 )
             )
+
+
 
             pridict_button = ui.tags.button(
                 "Predict Efficiency with PRIDICT 2.0",
